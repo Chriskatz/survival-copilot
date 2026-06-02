@@ -1,6 +1,7 @@
 {
   "plugins": [
-    "@qvac/sdk/llamacpp-completion/plugin"
+    "@qvac/sdk/llamacpp-completion/plugin",
+    "@qvac/sdk/llamacpp-embedding/plugin"
   ],
   "serve": {
     "models": {
@@ -12,6 +13,11 @@
           "ctx_size": 4096,
           "device": "gpu"
         }
+      },
+      "embed-mlm": {
+        "model": "EMBEDDINGGEMMA_300M_Q4_0",
+        "type": "llamacpp-embedding",
+        "preload": true
       }
     }
   }
