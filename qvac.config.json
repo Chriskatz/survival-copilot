@@ -1,0 +1,18 @@
+{
+  "plugins": [
+    "@qvac/sdk/llamacpp-completion/plugin"
+  ],
+  "serve": {
+    "models": {
+      "co-pilot": {
+        "model": "QWEN3_1_7B_INST_Q4",
+        "type": "llamacpp-completion",
+        "preload": true,
+        "config": {
+          "ctx_size": 4096,
+          "device": "gpu"
+        }
+      }
+    }
+  }
+}

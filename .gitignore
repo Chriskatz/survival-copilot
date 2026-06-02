@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.qvac-models/
+.vscode/
+.idea/
+coverage/
+.venv/
+__pycache__/
+*.pyc
