@@ -21,6 +21,7 @@ from pubsub import pub
 
 from chunker import chunk_for_mesh
 from reply import clean_reply
+from retriever import DEFAULT_MIN_SCORE, DEFAULT_TOP_K, Retriever
 
 try:
     from meshtastic.ble_interface import BLEInterface
@@ -49,27 +50,67 @@ MAX_REPLY_CHARS = int(os.getenv("MAX_REPLY_CHARS", "600"))
 
 SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 
+REFUSE_MSG = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,優先 SOS 求救"
 
-def ask_llm(question: str) -> str:
+
+def _is_chinese(text: str) -> bool:
+    cjk = sum(1 for c in text if "一" <= c <= "鿿")
+    return cjk >= max(1, len(text) // 5)
+
+
+def _format_chunk_for_prompt(hit, lang: str) -> str:
+    label = "出處" if lang == "zh" else "Source"
+    return f"【{label} {hit.chunk['source']} > {hit.chunk['h2']}】\n{hit.text}"
+
+
+def ask_llm(question: str, retriever: Retriever) -> tuple[str, list]:
+    hits = retriever.retrieve(question, k=DEFAULT_TOP_K, min_score=DEFAULT_MIN_SCORE)
+    if not hits:
+        return REFUSE_MSG, []
+
+    context_lang = "zh" if _is_chinese(question) else "en"
+    context = "\n\n".join(
+        _format_chunk_for_prompt(h, context_lang) for h in hits
+    )
+    if context_lang == "zh":
+        user_msg = (
+            "依以下【出處】段落回答。只准用段落內事實。\n\n"
+            f"---\n{context}\n---\n\n"
+            f"問題: {question}"
+        )
+    else:
+        user_msg = (
+            "Answer using ONLY the Source excerpts below. Do not invent facts.\n\n"
+            f"---\n{context}\n---\n\n"
+            f"Question: {question}"
+        )
+
+    lang_directive = (
+        "\n\n# THIS REPLY MUST BE IN TRADITIONAL CHINESE (繁體中文) — NOT SIMPLIFIED, NOT ENGLISH."
+        if context_lang == "zh"
+        else "\n\n# THIS REPLY MUST BE IN ENGLISH ONLY — NO CHINESE CHARACTERS."
+    )
     payload = {
         "model": QVAC_MODEL,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": question},
+            {"role": "system", "content": SYSTEM_PROMPT + lang_directive},
+            {"role": "user", "content": user_msg},
         ],
-        "temperature": 0.2,
+        "temperature": 0.1,
         "max_tokens": 400,
     }
     with httpx.Client(timeout=120.0) as client:
         r = client.post(f"{QVAC_BASE_URL}/chat/completions", json=payload)
         r.raise_for_status()
         data = r.json()
-    return clean_reply(data["choices"][0]["message"]["content"])
+    answer = clean_reply(data["choices"][0]["message"]["content"])
+    return answer, hits
 
 
 class CopilotBot:
-    def __init__(self, iface: BLEInterface) -> None:
+    def __init__(self, iface: BLEInterface, retriever: Retriever) -> None:
         self.iface = iface
+        self.retriever = retriever
         self.my_node_num: int | None = None
         try:
             self.my_node_num = iface.myInfo.my_node_num  # type: ignore[union-attr]
@@ -99,11 +140,21 @@ class CopilotBot:
                 return
 
             log.info("Q from %s ch%s: %s", sender, channel, question)
+            hits: list = []
             try:
-                answer = ask_llm(question)
+                answer, hits = ask_llm(question, self.retriever)
             except Exception as e:
                 log.exception("LLM call failed")
                 answer = f"co-pilot error: {e}"
+
+            if hits:
+                log.info(
+                    "   RAG top-%d: %s",
+                    len(hits),
+                    ", ".join(f"{h.score:.2f} {h.chunk['source']}" for h in hits),
+                )
+            else:
+                log.info("   RAG: no hit ≥ %.2f → REFUSE", DEFAULT_MIN_SCORE)
 
             if len(answer) > MAX_REPLY_CHARS:
                 answer = answer[:MAX_REPLY_CHARS].rstrip() + "…"
@@ -131,11 +182,14 @@ class CopilotBot:
 
 
 def main() -> None:
+    log.info("Loading RAG index…")
+    retriever = Retriever()
+
     log.info("Connecting BLE… address=%r", BLE_ADDRESS)
     iface = BLEInterface(address=BLE_ADDRESS)
     log.info("Connected. QVAC=%s model=%s prefix=%r", QVAC_BASE_URL, QVAC_MODEL, TRIGGER_PREFIX)
 
-    bot = CopilotBot(iface)
+    bot = CopilotBot(iface, retriever)
     pub.subscribe(bot.on_receive, "meshtastic.receive")
 
     sigint_count = 0

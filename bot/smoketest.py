@@ -17,6 +17,7 @@ import httpx
 from dotenv import load_dotenv
 
 from reply import clean_reply, likely_simplified
+from retriever import DEFAULT_MIN_SCORE, DEFAULT_TOP_K, Retriever
 
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
@@ -29,21 +30,56 @@ SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 def main() -> None:
     question = " ".join(sys.argv[1:]).strip() or "被毒蛇咬到了怎麼辦,三步驟"
     print(f"--- model={MODEL} url={BASE_URL} ---")
-    print(f"Q: {question}\n")
+    print(f"Q: {question}")
 
+    retriever = Retriever()
+    hits = retriever.retrieve(question, k=DEFAULT_TOP_K, min_score=DEFAULT_MIN_SCORE)
+    print(f"RAG: {len(hits)} hit(s) above {DEFAULT_MIN_SCORE}")
+    for h in hits:
+        print(f"  {h.score:.3f}  {h.chunk['source']} > {h.chunk['h2']}")
+    print()
+
+    if not hits:
+        print("A: (refused — no in-domain chunks)")
+        retriever.close()
+        return
+
+    cjk = sum(1 for c in question if "一" <= c <= "鿿")
+    lang = "zh" if cjk >= max(1, len(question) // 5) else "en"
+    label = "出處" if lang == "zh" else "Source"
+    context = "\n\n".join(
+        f"【{label} {h.chunk['source']} > {h.chunk['h2']}】\n{h.text}" for h in hits
+    )
+    if lang == "zh":
+        user_msg = (
+            "依以下【出處】段落回答。只准用段落內事實。\n\n"
+            f"---\n{context}\n---\n\n問題: {question}"
+        )
+    else:
+        user_msg = (
+            "Answer using ONLY the Source excerpts below. Do not invent facts.\n\n"
+            f"---\n{context}\n---\n\nQuestion: {question}"
+        )
+
+    lang_directive = (
+        "\n\n# THIS REPLY MUST BE IN TRADITIONAL CHINESE (繁體中文) — NOT SIMPLIFIED, NOT ENGLISH."
+        if lang == "zh"
+        else "\n\n# THIS REPLY MUST BE IN ENGLISH ONLY — NO CHINESE CHARACTERS."
+    )
     payload = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": question},
+            {"role": "system", "content": SYSTEM_PROMPT + lang_directive},
+            {"role": "user", "content": user_msg},
         ],
-        "temperature": 0.2,
+        "temperature": 0.1,
         "max_tokens": 400,
     }
     with httpx.Client(timeout=120.0) as client:
         r = client.post(f"{BASE_URL}/chat/completions", json=payload)
         r.raise_for_status()
         data = r.json()
+    retriever.close()
 
     raw = data["choices"][0]["message"]["content"]
     cleaned = clean_reply(raw)
