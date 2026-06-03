@@ -165,6 +165,47 @@
 
   <div class="arrow up"><span class="head">▲</span><span class="bar"></span><span>④ 切塊回覆（≤200B/段）— BLE → Wio → LoRa mesh → 手持機</span></div>
 
+  <!-- DONATION LAYER -->
+  <h2 style="border-color:#e3b341">💛 捐贈層 — 可選，與問答<span class="refuse">完全解耦</span></h2>
+  <div class="layer" style="border-color:#e3b341">
+    <span class="ltag" style="color:#e3b341">Support the Station</span>
+    <div style="font-size:13px;color:var(--muted);margin:2px 0 12px">
+      問答對所有人免費、<b style="color:#7ee787">零錢包檢查</b>。捐贈純粹支持基地台長期運作（電費 / 維修 / 未來太陽能高山站點）。
+    </div>
+    <div class="base-inner">
+      <div class="node">
+        <h3><span class="dot" style="background:#e3b341"></span>🌐 WDK 捐贈網頁 <span class="pill" style="background:#e3b341">山下</span></h3>
+        <div class="meta"><code>donate.html</code> · client-side 簽章 · seed 不離開瀏覽器</div>
+        <ul>
+          <li>金額 ☕$1 / 🔋$5 / ☀️$20 或自由輸入</li>
+          <li>簽「捐贈授權」→ <code>!donate</code> 字串 + QR</li>
+        </ul>
+      </div>
+      <div class="node">
+        <h3><span class="dot" style="background:#e3b341"></span>📡 管道 A — <code>!donate</code></h3>
+        <div class="meta">on-mesh 貼一次 · bot 驗 Ed25519 + 去重</div>
+        <ul>
+          <li>記入 pending → 回網時 settle</li>
+          <li>payload 含 <code>station_id</code>（未來多站）</li>
+        </ul>
+      </div>
+      <div class="node">
+        <h3><span class="dot" style="background:#e3b341"></span>📢 管道 B — <code>!support</code></h3>
+        <div class="meta">bot 公告 TRON 地址 + QR + 累計支持額</div>
+        <ul>
+          <li>任何錢包直接捐 · 不經 bot（trustless）</li>
+        </ul>
+      </div>
+      <div class="node seam" style="border-color:var(--llm)">
+        <h3><span class="dot c-llm"></span>⛓️ TRON USDT 結算</h3>
+        <div class="meta">回網時批次 settle（demo：Nile testnet）</div>
+        <ul>
+          <li>單向贈與 · 無餘額 / 無退款</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- REQUEST FLOW -->
   <h2>一次問答的流向</h2>
   <div class="flow">

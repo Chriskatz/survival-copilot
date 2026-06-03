@@ -1,6 +1,6 @@
 # 捐贈設計草案 — Survival Co-pilot「支持站點」(Support the Station)
 
-> **狀態**: 草案 v1,**未實作**。本文件供 review,通過後才寫 code。
+> **狀態**: v1 設計**已定案**(§11 七項決策 2026-06-03 拍板),**尚未實作**。實作分支建議 `wdk-donate`。
 > **目的**: 問答對所有人**免費且不設門檻**;WDK + Tether 用來做**自願捐贈**,支持基地台的長期運作(電費、維修、未來太陽能站點)。
 > **不在範圍內**: 改造手機 app、把捐贈當成付費門檻、KYC/AML、多鏈。
 
@@ -138,7 +138,8 @@ incoming text:
 │       ├── 記入 pending_donations（待結算）
 │       └── reply "🙏 感謝支持！已記錄 $X.XX，下山結算。"
 │
-├── starts with "!support" → 回站點 TRON 收款地址 + 一行說明（管道 B）
+├── starts with "!support" → 回站點 TRON 地址 + 累計支持額 + 一句維運說明（管道 B）
+│       例: "本站靠捐贈供電，已獲社群支持 $123.45。TRON: T... 🙏"
 │
 └── 其他                    → 忽略（維持 polite-on-shared-mesh）
 ```
@@ -164,11 +165,15 @@ incoming text:
       "received_at": 1717003600
     }
   ],
-  "lifetime_supported_cents": 12345
+  "lifetime_supported_cents": 12345,
+  "recent_supporters": [
+    { "donor": "3JqH…wLp", "amount_cents": 500, "at": 1717003600 }
+  ]
 }
 ```
 - 收到 `!donate` 後 atomic 寫入(`.tmp` 寫完 rename)。
-- `lifetime_supported_cents` 可選:給 demo / README 顯示「本站累計獲得社群支持 $X」。
+- `lifetime_supported_cents`:給 `!support` / demo / README 顯示「本站累計獲得社群支持 $X」。
+- `recent_supporters`:最近 N 位支持者的**縮寫 pubkey + 金額**,純致謝顯示在 README / demo 畫面。**絕不影響任何人的存取**。保留縮寫(非完整 pubkey)以降低公開捐贈紀錄的可識別度。
 
 ---
 
@@ -235,15 +240,15 @@ for d in pending_donations (station == 本站):
 
 ---
 
-## 11. 開放問題(請 review 時回覆)
+## 11. 已定案決策(v1,2026-06-03 拍板)
 
-1. **建議金額級距**: 提議 ☕$1 / 🔋$5 / ☀️$20,另允許自由輸入。OK?
-2. **`!support` 回什麼**: 純地址,還是地址 + 累計支持額 + 一句站點維運說明?
-3. **支持者致謝**: 要不要做一個「最近支持者」名單(用 donor_pubkey 縮寫)放 README / demo 畫面?(純致謝,絕不影響存取)
-4. **station_id 現在就放嗎**: 單站 demo 其實用不到,但放了未來多站不破格式。提議**現在就放**(4 bytes 便宜)。
-5. **過期天數**: 預設 30 天,可調 7–90。OK?
-6. **Demo 是否真的上鏈**: 提議 TRON testnet(Nile)真實結算,比 mock 有說服力。OK?
-7. **管道 B 是否也支持其他鏈/USDT 形式**: 提議 demo 只放 TRON 一個地址,保持單純;多鏈留 v2。
+1. **建議金額級距**: ☕$1 / 🔋$5 / ☀️$20(「養一天太陽能站」),另允許自由輸入。✅
+2. **`!support` 回應**: 站點 TRON 地址 + 累計支持額 + 一句維運說明(見 §6)。✅
+3. **支持者致謝**: 做「最近支持者」名單(donor_pubkey **縮寫** + 金額),顯示於 README / demo,純致謝、**絕不影響存取**(見 §7 `recent_supporters`)。✅
+4. **station_id**: 現在就放(4 bytes,為未來多站網路預留,格式不破)。✅
+5. **授權過期天數**: 預設 30 天,可調 7–90。✅
+6. **Demo 結算**: TRON testnet(Nile)**真實**簽章/broadcast/確認(免費測試幣)。現場需求:demo 當天要有網路 + 測試幣 + 站點錢包設好。✅
+7. **管道 B 鏈別**: demo 只放 TRON 一個地址,保持單純;多鏈(BTC / Ethereum)留 v2。✅
 
 ---
 
