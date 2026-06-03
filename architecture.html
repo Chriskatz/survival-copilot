@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survival Co-pilot · 架構概念圖</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e;
+    --line:#30363d; --field:#3fb950; --radio:#d29922; --base:#58a6ff;
+    --rag:#2dd4bf; --llm:#bc8cff; --danger:#f85149;
+    --shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 50% -10%,#1b2330,var(--bg));
+    color:var(--ink); font-family:-apple-system,"PingFang TC","Microsoft JhengHei",
+    "Segoe UI",system-ui,sans-serif; line-height:1.55; padding:40px 20px 80px;
+  }
+  .wrap{max-width:1040px;margin:0 auto}
+  header{text-align:center;margin-bottom:8px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:14px}
+  .offgrid{
+    display:inline-flex;gap:8px;align-items:center;font-size:13px;font-weight:600;
+    color:#7ee787;border:1px solid #238636;background:rgba(35,134,54,.12);
+    padding:6px 14px;border-radius:999px;letter-spacing:1px;
+  }
+  .offgrid b{color:var(--danger);text-decoration:line-through;font-weight:700}
+
+  .layer{
+    border:1px solid var(--line);border-radius:16px;background:var(--panel);
+    box-shadow:var(--shadow);padding:18px 20px;margin:0 auto;position:relative;
+  }
+  .ltag{
+    position:absolute;top:-11px;left:18px;font-size:11px;font-weight:700;
+    letter-spacing:1.5px;padding:2px 10px;border-radius:6px;background:var(--bg);
+    border:1px solid var(--line);text-transform:uppercase;
+  }
+  .row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:stretch}
+
+  .node{
+    border:1px solid var(--line);border-radius:12px;background:#0f141b;
+    padding:14px 16px;min-width:210px;flex:1;
+  }
+  .node h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .node .meta{color:var(--muted);font-size:12.5px}
+  .node ul{margin:8px 0 0;padding-left:18px;color:var(--ink);font-size:13px}
+  .node li{margin:2px 0}
+  .pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#0d1117}
+
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .c-field{background:var(--field)} .c-radio{background:var(--radio)}
+  .c-base{background:var(--base)} .c-rag{background:var(--rag)} .c-llm{background:var(--llm)}
+
+  .arrow{display:flex;flex-direction:column;align-items:center;color:var(--muted);
+    font-size:12px;margin:6px 0;gap:2px}
+  .arrow .bar{width:2px;height:18px;background:linear-gradient(var(--line),var(--base))}
+  .arrow .head{color:var(--base);font-size:16px;line-height:1}
+  .arrow.up .bar{background:linear-gradient(var(--field),var(--line))}
+  .arrow.up .head{color:var(--field)}
+
+  .base-inner{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+  .base-inner .node{flex:1 1 300px}
+  .seam{border-left:3px dashed var(--rag)}
+
+  .num{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--base);
+    color:#03060b;font-weight:800;font-size:12px;align-items:center;justify-content:center;
+    margin-right:6px;flex:none}
+  .flow{counter-reset:s;margin-top:30px}
+  .flow .step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;
+    border:1px solid var(--line);border-radius:10px;background:var(--panel);margin:8px 0}
+  .flow .step b{color:#7ee787}
+  .refuse{color:var(--danger);font-weight:600}
+
+  h2{font-size:18px;margin:34px 0 12px;border-left:4px solid var(--base);padding-left:10px}
+  .why{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .why .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 14px}
+  .why .card h4{margin:0 0 4px;font-size:14px;color:var(--rag)}
+  .why .card p{margin:0;font-size:13px;color:var(--muted)}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left}
+  th{background:var(--panel);color:var(--muted);font-weight:600}
+  code{background:#0f141b;border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-family:"SF Mono",Menlo,monospace;font-size:12.5px;color:#79c0ff}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:40px}
+  @media(max-width:680px){.why{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧭 Survival Co-pilot</h1>
+    <div class="sub">離線荒野 AI 副手 · Meshtastic LoRa mesh ↔ 本機 LLM + RAG</div>
+    <div class="offgrid">🛰️ <b>NO INTERNET</b> · <b>NO CELL</b> · <b>NO CLOUD</b> — 全部本機運算</div>
+  </header>
+
+  <!-- FIELD -->
+  <div class="layer" style="max-width:520px">
+    <span class="ltag" style="color:var(--field)">Field · 野外</span>
+    <div class="row">
+      <div class="node">
+        <h3><span class="dot c-field"></span>📱 手持 Meshtastic 裝置</h3>
+        <div class="meta">登山者 · 發短文查詢（含 <code>?</code> 前綴）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>① <code>?我迷路了怎麼辦</code> — LoRa mesh</span><span class="bar"></span><span class="head">▼</span></div>
+
+  <!-- RADIO -->
+  <div class="layer" style="max-width:520px">
+    <span class="ltag" style="color:var(--radio)">Radio · 電台</span>
+    <div class="row">
+      <div class="node">
+        <h3><span class="dot c-radio"></span>📡 Wio Tracker L1 Pro</h3>
+        <div class="meta">LoRa ⇄ BLE 橋接 · BLE 單一持有者（跑 bot 前先 Cmd+Q 掉 Meshtastic.app GUI）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>BLE</span><span class="bar"></span><span class="head">▼</span></div>
+
+  <!-- BASE STATION -->
+  <div class="layer">
+    <span class="ltag" style="color:var(--base)">Base Station · MacBook（100% 本機）</span>
+
+    <div class="row">
+      <div class="node" style="border-color:var(--base)">
+        <h3><span class="dot c-base"></span>⚙️ PROCESS 1 — <code>bot.py</code></h3>
+        <div class="meta">Python · 持有 BLE（meshtastic-python）</div>
+        <ul>
+          <li>subscribe <code>meshtastic.receive</code></li>
+          <li>過濾觸發前綴 <code>?</code></li>
+          <li>語言偵測（CJK 字比例）</li>
+          <li><code>clean_reply()</code> + chunk ≤200B（不斷 UTF-8 碼位）</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="base-inner">
+      <!-- RAG -->
+      <div class="node" style="border-color:var(--rag)">
+        <h3><span class="dot c-rag"></span>🔎 RAG 層 <span class="pill" style="background:var(--rag)">純 Python</span></h3>
+        <div class="meta"><code>retriever.py</code> · numpy cosine top-k</div>
+        <ul>
+          <li>門檻 <code>0.40</code> → <span class="refuse">LLM 前就拒答</span></li>
+          <li>啟動載入 <code>knowledge/index.json</code></li>
+          <li>build：<code>index.py</code> ← <code>knowledge/{zh,en}/*.md</code></li>
+          <li>雙語語料 · 44 chunks · 跨語言檢索</li>
+        </ul>
+      </div>
+      <!-- LLM SERVER -->
+      <div class="node seam" style="border-color:var(--llm)">
+        <h3><span class="dot c-llm"></span>🧠 PROCESS 2 — <code>qvac serve openai</code></h3>
+        <div class="meta">Node · 本機 LLM · HTTP <code>127.0.0.1:11434/v1</code></div>
+        <ul>
+          <li><code>/v1/embeddings</code> · <b>embed-mlm</b><br><span class="meta">EmbeddingGemma 300M Q4 · 768-dim L2-norm</span></li>
+          <li><code>/v1/chat/completions</code> · <b>co-pilot</b><br><span class="meta">Qwen3-1.7B Q4 · temp 0.1 · /no_think</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow up"><span class="head">▲</span><span class="bar"></span><span>④ 切塊回覆（≤200B/段）— BLE → Wio → LoRa mesh → 手持機</span></div>
+
+  <!-- REQUEST FLOW -->
+  <h2>一次問答的流向</h2>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><div><b>問題進來</b> — 手持機 → LoRa mesh → Wio (RX) → BLE → <code>bot.py</code>（通過 <code>?</code> 前綴）。</div></div>
+    <div class="step"><span class="num">2</span><div><b>RAG 檢索</b> — <code>bot.py</code> 把問題送 <code>/v1/embeddings</code> 取向量；<code>retriever.py</code> 對 <code>index.json</code> 算 cosine top-k。最高分 <span class="refuse">&lt; 0.40 → LLM 前直接拒答</span>；否則把命中 chunk 當 context 接到問題前。</div></div>
+    <div class="step"><span class="num">3</span><div><b>LLM 生成</b> — <code>bot.py</code> → <code>/v1/chat/completions</code>（co-pilot, temp 0.1, <code>/no_think</code>）→ 答案。</div></div>
+    <div class="step"><span class="num">4</span><div><b>回覆出去</b> — <code>clean_reply()</code> 去 <code>&lt;think&gt;</code> 空殼 → chunker 切 ≤200B（不切斷碼位）→ sendText DM → Wio (TX) → LoRa mesh → 手持機。</div></div>
+  </div>
+
+  <!-- WHY -->
+  <h2>為什麼是這個形狀</h2>
+  <div class="why">
+    <div class="card"><h4>兩個 process，用 HTTP 橋接</h4><p><code>@meshtastic/js</code> 的 BLE 只能在瀏覽器（Web Bluetooth）；meshtastic-python 的 BLE 在 macOS 才穩。QVAC SDK 又是 Node-only。HTTP 是乾淨的接縫。</p></div>
+    <div class="card"><h4>純 Python 自寫 retriever</h4><p>不用 <code>@qvac/rag</code> 的 HyperDB，省掉 Node↔Python 橋；hackathon scope 用 numpy cosine 就夠。</p></div>
+    <div class="card"><h4>跨語言檢索免標語言</h4><p>EmbeddingGemma 共享 100+ 語言語意空間，中文問題照樣命中英文 chunk，反之亦然。</p></div>
+    <div class="card"><h4>RAG 前置拒答</h4><p>門檻 0.40 在 LLM 之前擋掉離題問題，省 token，並給乾淨的「超出範圍」回覆。</p></div>
+  </div>
+
+  <!-- MODELS -->
+  <h2>模型（別名定義於 <code>qvac.config.json</code>）</h2>
+  <table>
+    <tr><th>別名</th><th>模型</th><th>角色</th></tr>
+    <tr><td><code>co-pilot</code></td><td><code>QWEN3_1_7B_INST_Q4</code></td><td>chat / completions</td></tr>
+    <tr><td><code>embed-mlm</code></td><td><code>EMBEDDINGGEMMA_300M_Q4_0</code></td><td>embeddings（RAG）</td></tr>
+  </table>
+
+  <footer>Survival Co-pilot · QVAC Hackathon I · v0.2-rag（真機驗證通過 2026-06-03）</footer>
+</div>
+</body>
+</html>

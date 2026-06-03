@@ -45,13 +45,13 @@ Why split: Meshtastic's BLE stack is native-Python-friendly on macOS; QVAC SDK i
 
 ```bash
 # Terminal 1 — LLM server
-cd /Users/chrishsiao/QVAC
+cd /path/to/QVAC
 npm install                    # one-time
 npx qvac doctor                # one-time host sanity check
 npx qvac serve openai -v       # auto-loads qvac.config.json → alias "co-pilot"
 
 # Terminal 2 — Meshtastic bot
-cd /Users/chrishsiao/QVAC
+cd /path/to/QVAC
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r bot/requirements.txt
 cp bot/.env.example bot/.env   # edit if you want a specific BLE name/address
