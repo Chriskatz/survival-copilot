@@ -13,7 +13,7 @@ flowchart TB
     end
 
     subgraph RADIO["RADIO"]
-        W["Wio Tracker L1 Pro<br/>LoRa &lt;-&gt; BLE"]
+        W["LoRa / Meshtastic Node<br/>LoRa &lt;-&gt; BLE"]
     end
 
     subgraph MAC["BASE STATION - MacBook (100% local)"]
@@ -62,10 +62,10 @@ flowchart TB
 
 ## Request flow
 
-1. **Query in** — handheld -> LoRa mesh -> Wio (RX) -> BLE -> `bot.py` (passes `?` prefix filter).
+1. **Query in** — handheld -> LoRa mesh -> Node (RX) -> BLE -> `bot.py` (passes `?` prefix filter).
 2. **RAG retrieve** — `bot.py` embeds the query via `/v1/embeddings`; `retriever.py` runs cosine top-k against `index.json`. If the top score is **< 0.40**, refuse **before** the LLM call. Otherwise prepend the matched chunks as context.
 3. **LLM generate** — `bot.py` -> `/v1/chat/completions` (co-pilot, temp 0.1, `/no_think`) -> answer.
-4. **Reply out** — `clean_reply()` strips empty `<think>` shells -> chunker splits to <=200B (never mid-codepoint) -> `bot.py` sendText DM -> Wio (TX) -> LoRa mesh -> handheld.
+4. **Reply out** — `clean_reply()` strips empty `<think>` shells -> chunker splits to <=200B (never mid-codepoint) -> `bot.py` sendText DM -> Node (TX) -> LoRa mesh -> handheld.
 
 ## Why this shape
 

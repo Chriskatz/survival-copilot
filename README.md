@@ -5,7 +5,7 @@
 > ⚠️ **DEMO ONLY — DO NOT USE IN ACTUAL EMERGENCIES** ⚠️
 > This project demonstrates a local-AI-over-LoRa architecture for a hackathon. The bundled Qwen3-1.7B model has **no medical / wilderness expertise** and may produce dangerously wrong instructions. In a real emergency, call 119 / 112 / local SAR. The RAG layer (planned next) will ground answers in verified sources; until then, treat every reply as illustrative of the *pipeline*, not the *advice*.
 
-Off-grid wilderness AI assistant. Hikers carry handheld **Meshtastic** LoRa radios; a base-station MacBook with a **Wio Tracker L1 Pro** over BLE runs a **local LLM via the QVAC SDK** and auto-answers questions over the mesh. No cloud. No cell signal needed. No central point of failure.
+Off-grid wilderness AI assistant. Hikers carry handheld **Meshtastic** LoRa radios; a base-station MacBook with a **LoRa / Meshtastic Node** over BLE runs a **local LLM via the QVAC SDK** and auto-answers questions over the mesh. No cloud. No cell signal needed. No central point of failure.
 
 ## Why this fits QVAC
 
@@ -14,7 +14,7 @@ QVAC's thesis is that AI must run *privately, locally, without permission*. Wild
 ## Architecture
 
 ```
-[Hiker handheld Meshtastic]──LoRa──▶[mesh peers]──LoRa──▶[Wio Tracker L1 Pro]
+[Hiker handheld Meshtastic]──LoRa──▶[mesh peers]──LoRa──▶[LoRa / Meshtastic Node]
                                                                   │ BLE
                                                                   ▼
                                                   ┌─────────────────────────┐
@@ -34,7 +34,7 @@ Why split: Meshtastic's BLE stack is native-Python-friendly on macOS; QVAC SDK i
 
 ## Stack
 
-- **Mesh**: [`meshtastic`](https://pypi.org/project/meshtastic/) (Python) over BLE to Wio Tracker L1 Pro
+- **Mesh**: [`meshtastic`](https://pypi.org/project/meshtastic/) (Python) over BLE to LoRa / Meshtastic Node
 - **AI**: [`@qvac/sdk`](https://docs.qvac.tether.io/) — `QWEN3_1_7B_INST_Q4` (~1 GB RAM, strong zh-TW)
 - **Bridge**: QVAC OpenAI-compat HTTP at `http://127.0.0.1:11434/v1`
 - **Chunker**: 200-byte UTF-8-safe segmentation (TS + Python copies, same algorithm, both unit-tested)

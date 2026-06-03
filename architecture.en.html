@@ -114,7 +114,7 @@
     <span class="ltag" style="color:var(--radio)">Radio</span>
     <div class="row">
       <div class="node">
-        <h3><span class="dot c-radio"></span>📡 Wio Tracker L1 Pro</h3>
+        <h3><span class="dot c-radio"></span>📡 LoRa / Meshtastic Node</h3>
         <div class="meta">LoRa ⇄ BLE bridge · BLE is single-owner (Cmd+Q the Meshtastic.app GUI before running the bot)</div>
       </div>
     </div>
@@ -163,7 +163,7 @@
     </div>
   </div>
 
-  <div class="arrow up"><span class="head">▲</span><span class="bar"></span><span>④ Chunked reply (≤200B/segment) — BLE → Wio → LoRa mesh → handheld</span></div>
+  <div class="arrow up"><span class="head">▲</span><span class="bar"></span><span>④ Chunked reply (≤200B/segment) — BLE → Node → LoRa mesh → handheld</span></div>
 
   <!-- DONATION LAYER -->
   <h2 style="border-color:#e3b341">💛 Donation layer — optional, <span class="refuse">fully decoupled from Q&amp;A</span></h2>
@@ -209,10 +209,10 @@
   <!-- REQUEST FLOW -->
   <h2>One request, end to end</h2>
   <div class="flow">
-    <div class="step"><span class="num">1</span><div><b>Query in</b> — handheld → LoRa mesh → Wio (RX) → BLE → <code>bot.py</code> (passes the <code>?</code> prefix filter).</div></div>
+    <div class="step"><span class="num">1</span><div><b>Query in</b> — handheld → LoRa mesh → Node (RX) → BLE → <code>bot.py</code> (passes the <code>?</code> prefix filter).</div></div>
     <div class="step"><span class="num">2</span><div><b>RAG retrieve</b> — <code>bot.py</code> embeds the query via <code>/v1/embeddings</code>; <code>retriever.py</code> runs cosine top-k against <code>index.json</code>. If the top score is <span class="refuse">&lt; 0.40 → refuse before the LLM call</span>; otherwise prepend the matched chunks as context.</div></div>
     <div class="step"><span class="num">3</span><div><b>LLM generate</b> — <code>bot.py</code> → <code>/v1/chat/completions</code> (co-pilot, temp 0.1, <code>/no_think</code>) → answer.</div></div>
-    <div class="step"><span class="num">4</span><div><b>Reply out</b> — <code>clean_reply()</code> strips empty <code>&lt;think&gt;</code> shells → chunker splits to ≤200B (never mid-codepoint) → sendText DM → Wio (TX) → LoRa mesh → handheld.</div></div>
+    <div class="step"><span class="num">4</span><div><b>Reply out</b> — <code>clean_reply()</code> strips empty <code>&lt;think&gt;</code> shells → chunker splits to ≤200B (never mid-codepoint) → sendText DM → Node (TX) → LoRa mesh → handheld.</div></div>
   </div>
 
   <!-- WHY -->
