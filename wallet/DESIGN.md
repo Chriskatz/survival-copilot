@@ -138,8 +138,10 @@ incoming text:
 │       ├── 記入 pending_donations（待結算）
 │       └── reply "🙏 感謝支持！已記錄 $X.XX，下山結算。"
 │
-├── starts with "!support" → 回站點 TRON 地址 + 累計支持額 + 一句維運說明（管道 B）
-│       例: "本站靠捐贈供電，已獲社群支持 $123.45。TRON: T... 🙏"
+├── starts with "!support" → 回站點 TRON 地址（純文字）+ 累計支持額 + 指向 QR（管道 B）
+│       例: "本站靠捐贈供電，已獲社群支持 $123.45。
+│            TRON: T... 掃基地台上的 QR 或開 donate.html。🙏"
+│       註: QR 無法走 mesh（純文字 / 會換行 / 掃不出）→ 一律 off-mesh，見 §8.3
 │
 └── 其他                    → 忽略（維持 polite-on-shared-mesh）
 ```
@@ -193,6 +195,17 @@ incoming text:
 ### 8.2 安全
 - Seed phrase **不送任何 server**(純 static page)。
 - 提示:離開頁面後 seed 不保存;建議用**專用小額 seed**,別用主錢包。
+
+### 8.3 QR 交付(off-mesh,重要)
+
+Meshtastic 文字訊息是純文字、≤200B/段、**無圖片**;手機聊天又會換行 + 比例字體,所以「文字 QR」(Unicode 方塊字)會被打亂、掃不出來,且體積爆掉 byte 預算 —— **QR 一律不走 mesh**。而且管道 B 捐款本來就需要網路上鏈,捐贈者掃碼當下必為 online,QR 根本不需經 mesh。QR 在有螢幕/實體的地方生成:
+
+- **實體印刷 QR(最 off-grid,推薦)**: 防水貼紙貼在基地台 / 登山口告示牌,山上當下、零電力可掃。
+- **`donate.html` client-side 生成(推薦)**: 捐贈者回網開網頁,由地址即時畫 QR(管道 A 的捐贈授權 QR 也在此頁產生)。
+- **README / 專案頁**: 給線上訪客。
+- mesh 上的 `!support` 只回**純文字地址 + 一句指向上述 QR**(見 §6)。
+
+> 若基地台想現場「亮一張 QR」給站旁的人,可在 **Mac 螢幕**彈 QR 視窗,或接 OLED/e-ink —— 但 128×64 OLED 只塞得下短網址 QR,34 字地址會太密。這是給站旁的人,不是遠端 mesh 上的登山者。
 
 ---
 

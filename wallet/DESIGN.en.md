@@ -139,8 +139,10 @@ incoming text:
 │       ├── record into pending_donations
 │       └── reply "Thank you for your support! Logged $X.XX, settling on return."
 │
-├── starts with "!support" → station TRON address + lifetime support total + one-line note (Channel B)
-│       e.g. "This station runs on donations - community has given $123.45 so far. TRON: T... thanks!"
+├── starts with "!support" → station TRON address (plain text) + lifetime total + a pointer to the QR (Channel B)
+│       e.g. "This station runs on donations - community has given $123.45 so far.
+│            TRON: T...  Scan the QR on the station or open donate.html. Thanks!"
+│       note: a QR can't travel over mesh (plain text / wraps / unscannable) -> always off-mesh, see §8.3
 │
 └── otherwise               → ignore (stays polite on shared mesh)
 ```
@@ -194,6 +196,17 @@ No sessions, no metering, no refunds. Just "donations pending settlement" and "i
 ### 8.2 Security
 - Seed phrase **never sent to any server** (pure static page).
 - Warn: the seed isn't stored after leaving the page; use a **dedicated low-value seed**, not a main wallet.
+
+### 8.3 QR delivery (off-mesh, important)
+
+Meshtastic text messages are plain text, ≤200B/segment, **no images**; the phone chat also wraps lines and uses a proportional font, so a "text QR" (Unicode block chars) gets mangled, is unscannable, and blows the byte budget — **the QR never travels over mesh**. And Channel B donations need internet to settle on-chain anyway, so the donor is online exactly when they'd scan — the QR doesn't need the mesh at all. The QR is generated where there's a screen or a physical surface:
+
+- **Printed QR (most off-grid, recommended)**: a weatherproof sticker on the base station / trailhead sign — scannable on the spot, zero power.
+- **`donate.html` client-side (recommended)**: the donor opens the page when back online; it draws the QR from the address (Channel A's donation-authorization QR is also produced on this page).
+- **README / project page**: for online visitors.
+- `!support` over mesh only returns the **plain-text address + a one-line pointer** to those QRs (see §6).
+
+> If the station wants to "show a QR" to someone standing next to it, pop a QR window on the **Mac screen** or attach an OLED/e-ink — but a 128×64 OLED only fits a short-URL QR; a 34-char address is too dense. That's for people at the station, not the hiker out on the mesh.
 
 ---
 
