@@ -9,6 +9,7 @@ Run:
 from __future__ import annotations
 
 import logging
+import math
 import os
 import signal
 import sys
@@ -48,6 +49,21 @@ REPLY_MODE = os.getenv("REPLY_MODE", "dm").lower()
 SEND_INTERVAL_S = float(os.getenv("SEND_INTERVAL_S", "2.0"))
 MAX_REPLY_CHARS = int(os.getenv("MAX_REPLY_CHARS", "600"))
 
+
+def _env_float(name: str):
+    v = os.getenv(name)
+    try:
+        return float(v) if v not in (None, "") else None
+    except ValueError:
+        return None
+
+
+# Base station's own location (Wio often has no GPS fix indoors). Set these to
+# enable distance/bearing to senders. Falls back to the node's fixed position.
+BASE_LAT = _env_float("BASE_LAT")
+BASE_LON = _env_float("BASE_LON")
+BASE_ALT = _env_float("BASE_ALT")
+
 SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 
 REFUSE_MSG = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,優先 SOS 求救"
@@ -61,6 +77,159 @@ def _is_chinese(text: str) -> bool:
 def _format_chunk_for_prompt(hit, lang: str) -> str:
     label = "出處" if lang == "zh" else "Source"
     return f"【{label} {hit.chunk['source']} > {hit.chunk['h2']}】\n{hit.text}"
+
+
+def _fmt_age(ts) -> str:
+    if not ts:
+        return "?"
+    age = int(time.time() - ts)
+    if age < 90:
+        return f"{age}s"
+    if age < 5400:
+        return f"{age // 60}m"
+    return f"{age // 3600}h"
+
+
+def _haversine_km(lat1, lon1, lat2, lon2) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _bearing_deg(lat1, lon1, lat2, lon2) -> float:
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dl = math.radians(lon2 - lon1)
+    y = math.sin(dl) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
+def _compass(deg) -> str:
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(deg / 45) % 8]
+
+
+def _fmt_dist(km) -> str:
+    return f"{int(round(km * 1000))} m" if km < 1 else f"{km:.1f} km"
+
+
+def _my_node_num(interface):
+    try:
+        return interface.myInfo.my_node_num
+    except Exception:
+        return None
+
+
+def _base_position(interface):
+    """Base station location: .env BASE_LAT/LON first, else the node's own
+    (fixed) position. Returns (lat, lon, alt) with None for any unknown."""
+    if BASE_LAT is not None and BASE_LON is not None:
+        return BASE_LAT, BASE_LON, BASE_ALT
+    try:
+        pos = ((interface.getMyNodeInfo() or {}).get("position")) or {}
+        if pos.get("latitude") is not None and pos.get("longitude") is not None:
+            return pos["latitude"], pos["longitude"], pos.get("altitude")
+    except Exception:
+        pass
+    return None, None, None
+
+
+def sender_info(interface, node_num: int | None) -> str:
+    """Best-effort one-line GPS + power snapshot for the sender.
+
+    Read from the local node DB, which meshtastic-python fills from the
+    sender's periodic Position / Telemetry broadcasts — NOT from the text
+    packet. Values are LAST-KNOWN, not real-time. Never raises.
+    """
+    try:
+        node = None
+        if node_num is not None:
+            node = (getattr(interface, "nodesByNum", None) or {}).get(node_num)
+            if node is None:
+                for n in (getattr(interface, "nodes", None) or {}).values():
+                    if n.get("num") == node_num:
+                        node = n
+                        break
+        if node is None:
+            return "telemetry: node not in DB yet"
+
+        pos = node.get("position") or {}
+        dm = node.get("deviceMetrics") or {}
+
+        if pos.get("latitude") is not None and pos.get("longitude") is not None:
+            loc = f"📍 {pos['latitude']:.5f},{pos['longitude']:.5f}"
+            if pos.get("altitude") is not None:
+                loc += f" alt={pos['altitude']}m"
+            if pos.get("groundSpeed") is not None:
+                loc += f" spd={pos['groundSpeed']}"  # unit per firmware (m/s)
+            if pos.get("groundTrack") is not None:
+                loc += f" hdg={pos['groundTrack']}°"
+            loc += f" (age {_fmt_age(pos.get('time'))})"
+
+            blat, blon, balt = _base_position(interface)
+            if blat is not None and node.get("num") != _my_node_num(interface):
+                dist = _haversine_km(blat, blon, pos["latitude"], pos["longitude"])
+                brg = _bearing_deg(blat, blon, pos["latitude"], pos["longitude"])
+                loc += f" · ~{_fmt_dist(dist)} from base, bearing {brg:.0f}° {_compass(brg)}"
+                if balt is not None and pos.get("altitude") is not None:
+                    loc += f" · Δalt {int(pos['altitude'] - balt):+d}m"
+        else:
+            loc = "📍 no GPS"
+
+        if dm.get("batteryLevel") is not None:
+            pwr = f"🔋 {dm['batteryLevel']}%"
+            if dm.get("voltage") is not None:
+                pwr += f" {dm['voltage']:.2f}V"
+        else:
+            pwr = "🔋 no telemetry"
+
+        link = (
+            f"snr={node.get('snr')} hops={node.get('hopsAway')} "
+            f"heard {_fmt_age(node.get('lastHeard'))} ago"
+        )
+        return f"{loc} | {pwr} | {link}"
+    except Exception as e:
+        return f"telemetry lookup failed: {e}"
+
+
+def log_connected_node(interface) -> None:
+    """Log the base station's OWN Meshtastic node (the one we connected over BLE)."""
+    try:
+        num = None
+        try:
+            num = interface.myInfo.my_node_num
+        except Exception:
+            pass
+
+        my = None
+        try:
+            my = interface.getMyNodeInfo()
+        except Exception:
+            my = None
+        user = (my or {}).get("user") or {}
+        if not user:
+            try:
+                user = interface.getMyUser() or {}
+            except Exception:
+                user = {}
+
+        fw = ""
+        try:
+            fw = getattr(interface.metadata, "firmware_version", "") or ""
+        except Exception:
+            fw = ""
+
+        log.info(
+            "Connected node: %s (%s) id=%s num=%s hw=%s%s",
+            user.get("longName", "?"), user.get("shortName", "?"),
+            user.get("id", "?"), num, user.get("hwModel", "?"),
+            f" fw={fw}" if fw else "",
+        )
+        log.info("   node status: %s", sender_info(interface, num))
+    except Exception as e:
+        log.warning("Could not read connected node info: %s", e)
 
 
 def ask_llm(question: str, retriever: Retriever) -> tuple[str, list]:
@@ -117,7 +286,7 @@ class CopilotBot:
         except Exception:
             log.warning("Could not read my_node_num; self-message filter disabled")
 
-    def on_receive(self, packet: dict, interface) -> None:  # noqa: ARG002 — required by pubsub
+    def on_receive(self, packet: dict, interface) -> None:
         try:
             decoded = packet.get("decoded") or {}
             if decoded.get("portnum") != "TEXT_MESSAGE_APP":
@@ -140,6 +309,7 @@ class CopilotBot:
                 return
 
             log.info("Q from %s ch%s: %s", sender, channel, question)
+            log.info("   sender: %s", sender_info(interface, sender))
             hits: list = []
             try:
                 answer, hits = ask_llm(question, self.retriever)
@@ -188,6 +358,7 @@ def main() -> None:
     log.info("Connecting BLE… address=%r", BLE_ADDRESS)
     iface = BLEInterface(address=BLE_ADDRESS)
     log.info("Connected. QVAC=%s model=%s prefix=%r", QVAC_BASE_URL, QVAC_MODEL, TRIGGER_PREFIX)
+    log_connected_node(iface)
 
     bot = CopilotBot(iface, retriever)
     pub.subscribe(bot.on_receive, "meshtastic.receive")
