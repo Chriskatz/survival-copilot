@@ -12,3 +12,7 @@ coverage/
 .venv/
 __pycache__/
 *.pyc
+
+# Benchmark / verification run outputs — regenerate per demo machine via
+# tools/audit_run.mjs and bot/injection_test.py (machine-specific, not source).
+evidence/
