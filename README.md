@@ -3,18 +3,18 @@
 > QVAC Hackathon I — *Unleash Edge AI* entry
 
 > ⚠️ **DEMO ONLY — DO NOT USE IN ACTUAL EMERGENCIES** ⚠️
-> This project demonstrates a local-AI-over-LoRa architecture for a hackathon. The bundled Qwen3-1.7B model has **no medical / wilderness expertise** and may produce dangerously wrong instructions. In a real emergency, call 119 / 112 / local SAR. The RAG layer (planned next) will ground answers in verified sources; until then, treat every reply as illustrative of the *pipeline*, not the *advice*.
+> This project demonstrates a local-AI-over-LoRa architecture for a hackathon. The bundled Qwen3-1.7B model has **no medical / survival expertise** and may produce dangerously wrong instructions. In a real emergency, call 119 / 112 / local SAR. The RAG layer (planned next) will ground answers in verified sources; until then, treat every reply as illustrative of the *pipeline*, not the *advice*.
 
-Off-grid wilderness AI assistant. Hikers carry handheld **Meshtastic** LoRa radios; a base-station MacBook with a **LoRa / Meshtastic Node** over BLE runs a **local LLM via the QVAC SDK** and auto-answers questions over the mesh. No cloud. No cell signal needed. No central point of failure.
+Off-grid **survival & rescue** AI for when the network goes down — disaster zones (earthquake, typhoon, tsunami, war) or remote no-signal areas. People on the ground carry handheld **Meshtastic** LoRa radios; a base-station MacBook with a **LoRa / Meshtastic Node** over BLE runs a **local LLM via the QVAC SDK** and auto-answers questions over the mesh. No cloud. No cell signal needed. No central point of failure.
 
 ## Why this fits QVAC
 
-QVAC's thesis is that AI must run *privately, locally, without permission*. Wilderness is the literal proving ground: when there is no internet, the AI must still work — and lives may depend on it.
+QVAC's thesis is that AI must run *privately, locally, without permission*. A disaster zone or the deep backcountry is the literal proving ground: when the network is down, the AI must still work — and lives may depend on it.
 
 ## Architecture
 
 ```
-[Hiker handheld Meshtastic]──LoRa──▶[mesh peers]──LoRa──▶[LoRa / Meshtastic Node]
+[Handheld Meshtastic]──LoRa──▶[mesh peers]──LoRa──▶[LoRa / Meshtastic Node]
                                                                   │ BLE
                                                                   ▼
                                                   ┌─────────────────────────┐
@@ -119,7 +119,7 @@ Picked because:
 Rejected:
 - `QWEN3_600M_INST_Q4` — too small, hallucinates on life-critical answers.
 - `LLAMA_3_2_1B_INST_Q4_0` — weak Chinese.
-- QVAC `MedPsy-1.7B / 4B` — English-only and medical-only; wilderness scope is broader.
+- QVAC `MedPsy-1.7B / 4B` — English-only and medical-only; our survival / disaster scope is broader.
 
 Upgrade path: swap `QVAC_MODEL` to a Qwen2.5-7B-Instruct GGUF alias if the demo laptop has ≥16 GB RAM and ~20 s response time is acceptable.
 

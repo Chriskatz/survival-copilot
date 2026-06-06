@@ -1,15 +1,16 @@
 # Survival Co-pilot — Architecture
 
-Off-grid wilderness AI co-pilot. A hiker sends a short text query over a
-Meshtastic LoRa mesh; a MacBook base station grounds the answer in a local
-knowledge base (RAG) and a local LLM, then replies back over the mesh.
+Off-grid survival & rescue AI co-pilot for when the network is down (disaster
+or remote). A user sends a short text query over a Meshtastic LoRa mesh; a
+MacBook base station grounds the answer in a local knowledge base (RAG) and a
+local LLM, then replies back over the mesh.
 **No internet, no cell, no cloud** — everything inside the base station runs
 100% on-device (the QVAC "unstoppable / private / local" thesis).
 
 ```mermaid
 flowchart TB
     subgraph FIELD["FIELD - off-grid"]
-        H["Handheld Meshtastic device<br/>(hiker)"]
+        H["Handheld Meshtastic device<br/>(person in distress)"]
     end
 
     subgraph RADIO["RADIO"]
