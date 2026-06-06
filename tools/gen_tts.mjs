@@ -1,5 +1,5 @@
 // Generate slide narration audio with QVAC's on-device TTS (@qvac/sdk, supertonic).
-// Reads the EN blocks from narration.md → writes assets/audio/s1..s10.wav.
+// Reads the EN blocks from docs/narration.md → writes docs/assets/audio/s1..s10.wav.
 // Run:  node tools/gen_tts.mjs
 import { loadModel, textToSpeech, unloadModel, TTS_EN_SUPERTONIC_Q8_0 } from "@qvac/sdk";
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -23,14 +23,14 @@ function toWav(samples, sampleRate) {
   return Buffer.concat([h, data]);
 }
 
-const md = readFileSync(join(ROOT, "narration.md"), "utf8");
+const md = readFileSync(join(ROOT, "docs", "narration.md"), "utf8");
 const texts = [...md.matchAll(/^\*\*EN —\*\*\s*(.+)$/gm)].map((m) => m[1].trim());
 if (texts.length !== 10) {
   console.error(`Expected 10 EN narration blocks, found ${texts.length}.`);
   process.exit(1);
 }
 
-const outDir = join(ROOT, "assets", "audio");
+const outDir = join(ROOT, "docs", "assets", "audio");
 mkdirSync(outDir, { recursive: true });
 
 console.log("Loading QVAC supertonic TTS (downloads on first run)…");
@@ -50,5 +50,5 @@ for (let i = 0; i < texts.length; i++) {
 }
 
 await unloadModel({ modelId });
-console.log("Done → assets/audio/s1..s10.wav");
+console.log("Done → docs/assets/audio/s1..s10.wav");
 process.exit(0);

@@ -39,7 +39,7 @@ Two co-operating processes, bridged by a local HTTP API:
 - **`qvac serve openai`** (Node, `@qvac/sdk`) — loads the LLM **and** the embedding model, exposes an OpenAI-compatible API on `127.0.0.1:11434`.
 - **`bot/bot.py`** (Python) — owns the BLE radio (`meshtastic-python`), embeds the query + retrieves top-k from the local corpus (RAG), refuses out-of-scope questions, calls the LLM, chunks the reply to ≤200 bytes, sends it back.
 
-Why split: `meshtastic-python`'s BLE is stable on macOS; the QVAC SDK is Node. The local HTTP layer is the clean, cloud-free bridge. Full visual: open `architecture.html` (zh) / `architecture.en.html` (en).
+Why split: `meshtastic-python`'s BLE is stable on macOS; the QVAC SDK is Node. The local HTTP layer is the clean, cloud-free bridge. Full visual: open `docs/architecture.zh.html` (zh) / `docs/architecture.en.html` (en).
 
 ## Requirements (BYOH)
 
@@ -118,20 +118,27 @@ Upgrade path: point `QVAC_MODEL` at a larger GGUF alias (e.g. Qwen2.5-7B) if the
 ## Project layout
 
 ```
-bot/                  Python base-station bot (owns the radio + RAG)
+bot/                  Python base-station bot — the runtime (owns the radio + RAG)
   bot.py              mesh receive → RAG retrieve → QVAC LLM → chunk → send
   index.py            build knowledge/index.json via @qvac/sdk embeddings
   retriever.py        numpy cosine top-k retriever (threshold 0.40 → refuse)
+  reply.py            output cleanup (strips empty <think> shells)
+  chunker.py          200-byte UTF-8-safe LoRa segmentation
   smoketest.py        full RAG + LLM flow WITHOUT BLE (no-hardware repro)
   check_embed.py      embeddings sanity check
-  chunker.py          200-byte UTF-8-safe LoRa segmentation
+  injection_test.py   prompt-injection resistance check → evidence/
   system_prompt.txt   system prompt (read at startup)
   .env.example        all runtime knobs
 knowledge/{zh,en}/    bilingual RAG corpus  ·  index.json (built artifact)
+tools/                Node helpers (run via @qvac/sdk)
+  langdetect.mjs      query language detection (QVAC @qvac/langdetect-text)
+  audit_run.mjs       auditable inference log (load/unload, TTFT, tokens/sec)
+  gen_tts.mjs         deck narration audio via QVAC on-device TTS
+docs/                 architecture diagrams + pitch deck + narration
+  architecture.md / .zh.html / .en.html   system diagrams
+  slides.html         pitch deck (open in a browser, arrow keys to navigate)
 qvac.config.json      QVAC model aliases (co-pilot + embed-mlm)
-architecture.html / .en.html / .md   system diagrams
-slides.html           pitch deck (open in a browser, arrow keys to navigate)
-src/                  legacy TS scaffold (chunker + prompt; not on the runtime path)
+remote-apis.yaml      remote-API disclosure (declares: none at runtime)
 ```
 
 ## Constraints
