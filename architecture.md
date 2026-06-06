@@ -2,7 +2,7 @@
 
 Off-grid survival & rescue AI co-pilot for when the network is down (disaster
 or remote). A user sends a short text query over a Meshtastic LoRa mesh; a
-MacBook base station grounds the answer in a local knowledge base (RAG) and a
+laptop / SBC base station grounds the answer in a local knowledge base (RAG) and a
 local LLM, then replies back over the mesh.
 **No internet, no cell, no cloud** — everything inside the base station runs
 100% on-device (the QVAC "unstoppable / private / local" thesis).
@@ -17,7 +17,7 @@ flowchart TB
         W["LoRa / Meshtastic Node<br/>LoRa &lt;-&gt; BLE"]
     end
 
-    subgraph MAC["BASE STATION - MacBook (100% local)"]
+    subgraph MAC["BASE STATION - laptop / SBC (100% local)"]
         direction TB
         subgraph P1["PROCESS 1 - bot.py (Python, owns BLE)"]
             BOT["subscribe receive<br/>filter trigger prefix '?'<br/>language detect (CJK ratio)<br/>clean_reply + chunk &le;200B (UTF-8 safe)"]
