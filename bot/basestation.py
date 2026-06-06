@@ -3,7 +3,7 @@
 Run:
     1. Quit the Meshtastic macOS app (BLE is single-owner).
     2. Start QVAC server:  qvac serve openai
-    3. python bot/bot.py
+    3. python bot/basestation.py
 """
 
 from __future__ import annotations

@@ -128,7 +128,7 @@
 
     <div class="row">
       <div class="node" style="border-color:var(--base)">
-        <h3><span class="dot c-base"></span>⚙️ PROCESS 1 — <code>bot.py</code></h3>
+        <h3><span class="dot c-base"></span>⚙️ PROCESS 1 — <code>basestation.py</code></h3>
         <div class="meta">Python · 持有 BLE（meshtastic-python）</div>
         <ul>
           <li>subscribe <code>meshtastic.receive</code></li>
@@ -147,7 +147,7 @@
         <ul>
           <li>門檻 <code>0.40</code> → <span class="refuse">LLM 前就拒答</span></li>
           <li>啟動載入 <code>knowledge/index.json</code></li>
-          <li>build：<code>index.py</code> ← <code>knowledge/{zh,en}/*.md</code></li>
+          <li>build：<code>build_index.py</code> ← <code>knowledge/{zh,en}/*.md</code></li>
           <li>雙語語料 · 44 chunks · 跨語言檢索</li>
         </ul>
       </div>
@@ -168,9 +168,9 @@
   <!-- REQUEST FLOW -->
   <h2>一次問答的流向</h2>
   <div class="flow">
-    <div class="step"><span class="num">1</span><div><b>問題進來</b> — 手持機 → LoRa mesh → Node (RX) → BLE → <code>bot.py</code>（通過 <code>?</code> 前綴）。</div></div>
-    <div class="step"><span class="num">2</span><div><b>RAG 檢索</b> — <code>bot.py</code> 把問題送 <code>/v1/embeddings</code> 取向量；<code>retriever.py</code> 對 <code>index.json</code> 算 cosine top-k。最高分 <span class="refuse">&lt; 0.40 → LLM 前直接拒答</span>；否則把命中 chunk 當 context 接到問題前。</div></div>
-    <div class="step"><span class="num">3</span><div><b>LLM 生成</b> — <code>bot.py</code> → <code>/v1/chat/completions</code>（co-pilot, temp 0.1, <code>/no_think</code>）→ 答案。</div></div>
+    <div class="step"><span class="num">1</span><div><b>問題進來</b> — 手持機 → LoRa mesh → Node (RX) → BLE → <code>basestation.py</code>（通過 <code>?</code> 前綴）。</div></div>
+    <div class="step"><span class="num">2</span><div><b>RAG 檢索</b> — <code>basestation.py</code> 把問題送 <code>/v1/embeddings</code> 取向量；<code>retriever.py</code> 對 <code>index.json</code> 算 cosine top-k。最高分 <span class="refuse">&lt; 0.40 → LLM 前直接拒答</span>；否則把命中 chunk 當 context 接到問題前。</div></div>
+    <div class="step"><span class="num">3</span><div><b>LLM 生成</b> — <code>basestation.py</code> → <code>/v1/chat/completions</code>（co-pilot, temp 0.1, <code>/no_think</code>）→ 答案。</div></div>
     <div class="step"><span class="num">4</span><div><b>回覆出去</b> — <code>clean_reply()</code> 去 <code>&lt;think&gt;</code> 空殼 → chunker 切 ≤200B（不切斷碼位）→ sendText DM → Node (TX) → LoRa mesh → 手持機。</div></div>
   </div>
 

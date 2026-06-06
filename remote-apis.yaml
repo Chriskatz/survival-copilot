@@ -14,7 +14,7 @@ project: Survival Co-pilot
 
 runtime:
   # Calls made while the product is actually serving queries (the demo path:
-  # LoRa mesh -> bot.py -> qvac serve -> LLM/RAG -> mesh reply).
+  # LoRa mesh -> basestation.py -> qvac serve -> LLM/RAG -> mesh reply).
   remote_api_calls: none
   detail: >
     Every network call in application code targets the loopback interface
@@ -49,6 +49,8 @@ provisioning:
     operator: npm (build tooling, not application code)
     endpoint: https://registry.npmjs.org
     when: npm install
+
+
     data_sent: none (standard package resolution)
     purpose: install @qvac/sdk and dependencies
     required_at_runtime: false

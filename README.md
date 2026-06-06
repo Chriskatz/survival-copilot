@@ -27,7 +27,7 @@ QVAC's thesis is that AI must run *privately, locally, and without permission on
                                   ┌───────────────────────────────────────────┐
                                   │ Base station (laptop / SBC) — 100% local    │
                                   │                                             │
-                                  │  bot.py (Python)  ──HTTP──▶ qvac serve openai│
+                                  │  basestation.py ──HTTP──▶ qvac serve openai │
                                   │   owns BLE, RAG retrieve,    @qvac/sdk:      │
                                   │   chunk ≤200B                · co-pilot (LLM)│
                                   │                              · embed-mlm     │
@@ -37,7 +37,7 @@ QVAC's thesis is that AI must run *privately, locally, and without permission on
 Two co-operating processes, bridged by a local HTTP API:
 
 - **`qvac serve openai`** (Node, `@qvac/sdk`) — loads the LLM **and** the embedding model, exposes an OpenAI-compatible API on `127.0.0.1:11434`.
-- **`bot/bot.py`** (Python) — owns the BLE radio (`meshtastic-python`), embeds the query + retrieves top-k from the local corpus (RAG), refuses out-of-scope questions, calls the LLM, chunks the reply to ≤200 bytes, sends it back.
+- **`bot/basestation.py`** (Python) — owns the BLE radio (`meshtastic-python`), embeds the query + retrieves top-k from the local corpus (RAG), refuses out-of-scope questions, calls the LLM, chunks the reply to ≤200 bytes, sends it back.
 
 Why split: `meshtastic-python`'s BLE is stable on macOS; the QVAC SDK is Node. The local HTTP layer is the clean, cloud-free bridge. Full visual: open `docs/architecture.zh.html` (zh) / `docs/architecture.en.html` (en).
 
@@ -65,13 +65,13 @@ npx qvac serve openai            # or: ./node_modules/.bin/qvac serve openai
 **2. (Re)build the RAG index** — only needed if you edit `knowledge/*.md`; `knowledge/index.json` is committed:
 
 ```bash
-python bot/index.py              # embeds every corpus chunk via @qvac/sdk /v1/embeddings
+python bot/build_index.py        # embeds every corpus chunk via @qvac/sdk /v1/embeddings
 ```
 
 **3a. Reproduce the AI core WITHOUT any radio** (recommended for reviewers):
 
 ```bash
-python bot/check_embed.py                 # sanity-check embeddings (prints a 768-dim vector)
+python bot/check_embeddings.py            # sanity-check embeddings (prints a 768-dim vector)
 python bot/smoketest.py "bitten by a snake — what do I do"   # full RAG + LLM, no BLE
 python bot/smoketest.py "what's the bitcoin price"           # off-topic → refused before the LLM
 ```
@@ -80,7 +80,7 @@ python bot/smoketest.py "what's the bitcoin price"           # off-topic → ref
 
 ```bash
 cp bot/.env.example bot/.env     # optionally set MESH_BLE_ADDRESS / BASE_LAT / BASE_LON
-python bot/bot.py
+python bot/basestation.py
 ```
 
 Then from a handheld Meshtastic device, send `?bitten by a snake — what do I do` (note the `?` prefix). The bot DMs a chunked, grounded reply.
@@ -119,13 +119,13 @@ Upgrade path: point `QVAC_MODEL` at a larger GGUF alias (e.g. Qwen2.5-7B) if the
 
 ```
 bot/                  Python base-station bot — the runtime (owns the radio + RAG)
-  bot.py              mesh receive → RAG retrieve → QVAC LLM → chunk → send
-  index.py            build knowledge/index.json via @qvac/sdk embeddings
+  basestation.py      mesh receive → RAG retrieve → QVAC LLM → chunk → send
+  build_index.py      build knowledge/index.json via @qvac/sdk embeddings
   retriever.py        numpy cosine top-k retriever (threshold 0.40 → refuse)
   reply.py            output cleanup (strips empty <think> shells)
   chunker.py          200-byte UTF-8-safe LoRa segmentation
   smoketest.py        full RAG + LLM flow WITHOUT BLE (no-hardware repro)
-  check_embed.py      embeddings sanity check
+  check_embeddings.py embeddings sanity check
   injection_test.py   prompt-injection resistance check → evidence/
   system_prompt.txt   system prompt (read at startup)
   .env.example        all runtime knobs

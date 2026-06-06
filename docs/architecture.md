@@ -19,7 +19,7 @@ flowchart TB
 
     subgraph MAC["BASE STATION - laptop / SBC (100% local)"]
         direction TB
-        subgraph P1["PROCESS 1 - bot.py (Python, owns BLE)"]
+        subgraph P1["PROCESS 1 - basestation.py (Python, owns BLE)"]
             BOT["subscribe receive<br/>filter trigger prefix '?'<br/>language detect (CJK ratio)<br/>clean_reply + chunk &le;200B (UTF-8 safe)"]
         end
         subgraph RAGL["RAG layer (pure Python)"]
@@ -37,7 +37,7 @@ flowchart TB
     W   -- "BLE (single-owner)"     --> BOT
     BOT -- "2. embed query (HTTP)"  --> EMB
     EMB -- "query vector"           --> RET
-    COR -- "build: index.py"        --> IDX
+    COR -- "build: build_index.py"        --> IDX
     IDX -- "load at startup"        --> RET
     RET -- "top-k context / refuse if max&lt;0.40" --> BOT
     BOT -- "3. prompt + context (HTTP)" --> LLM
@@ -48,17 +48,17 @@ flowchart TB
 
 ## Request flow
 
-1. **Query in** — handheld -> LoRa mesh -> Node (RX) -> BLE -> `bot.py` (passes `?` prefix filter).
-2. **RAG retrieve** — `bot.py` embeds the query via `/v1/embeddings`; `retriever.py` runs cosine top-k against `index.json`. If the top score is **< 0.40**, refuse **before** the LLM call. Otherwise prepend the matched chunks as context.
-3. **LLM generate** — `bot.py` -> `/v1/chat/completions` (co-pilot, temp 0.1, `/no_think`) -> answer.
-4. **Reply out** — `clean_reply()` strips empty `<think>` shells -> chunker splits to <=200B (never mid-codepoint) -> `bot.py` sendText DM -> Node (TX) -> LoRa mesh -> handheld.
+1. **Query in** — handheld -> LoRa mesh -> Node (RX) -> BLE -> `basestation.py` (passes `?` prefix filter).
+2. **RAG retrieve** — `basestation.py` embeds the query via `/v1/embeddings`; `retriever.py` runs cosine top-k against `index.json`. If the top score is **< 0.40**, refuse **before** the LLM call. Otherwise prepend the matched chunks as context.
+3. **LLM generate** — `basestation.py` -> `/v1/chat/completions` (co-pilot, temp 0.1, `/no_think`) -> answer.
+4. **Reply out** — `clean_reply()` strips empty `<think>` shells -> chunker splits to <=200B (never mid-codepoint) -> `basestation.py` sendText DM -> Node (TX) -> LoRa mesh -> handheld.
 
 ## Why this shape
 
 - **Two processes bridged by HTTP** — `@meshtastic/js` only does BLE via browser Web Bluetooth; `meshtastic-python`'s BLE is stable on macOS. QVAC SDK is Node-only. HTTP on `127.0.0.1:11434` is the clean seam between the Python radio owner and the Node LLM server.
 - **Pure-Python retriever (not `@qvac/rag`)** — avoids a Node<->Python bridge; HyperDB is overkill for hackathon scope.
 - **Cross-lingual retrieval with no language tags** — EmbeddingGemma shares one semantic space across 100+ languages, so a Chinese query retrieves relevant English chunks and vice versa.
-- **macOS BLE is single-owner** — quit the Meshtastic.app GUI (Cmd+Q) before running `bot.py`, or the BLE scan hangs.
+- **macOS BLE is single-owner** — quit the Meshtastic.app GUI (Cmd+Q) before running `basestation.py`, or the BLE scan hangs.
 
 ## Models (aliases in `qvac.config.json`)
 

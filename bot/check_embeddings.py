@@ -1,8 +1,8 @@
 """Quick sanity check: does qvac serve openai's /v1/embeddings actually work?
 
 Usage:
-    python bot/check_embed.py
-    python bot/check_embed.py "any custom text here"
+    python bot/check_embeddings.py
+    python bot/check_embeddings.py "any custom text here"
 
 Prints embedding dimension and first/last few values. Run from inside venv.
 """

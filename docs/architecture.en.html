@@ -128,7 +128,7 @@
 
     <div class="row">
       <div class="node" style="border-color:var(--base)">
-        <h3><span class="dot c-base"></span>⚙️ PROCESS 1 — <code>bot.py</code></h3>
+        <h3><span class="dot c-base"></span>⚙️ PROCESS 1 — <code>basestation.py</code></h3>
         <div class="meta">Python · owns BLE (meshtastic-python)</div>
         <ul>
           <li>subscribe <code>meshtastic.receive</code></li>
@@ -147,7 +147,7 @@
         <ul>
           <li>threshold <code>0.40</code> → <span class="refuse">refuse before the LLM</span></li>
           <li>loads <code>knowledge/index.json</code> at startup</li>
-          <li>build: <code>index.py</code> ← <code>knowledge/{zh,en}/*.md</code></li>
+          <li>build: <code>build_index.py</code> ← <code>knowledge/{zh,en}/*.md</code></li>
           <li>bilingual corpus · 44 chunks · cross-lingual retrieval</li>
         </ul>
       </div>
@@ -168,9 +168,9 @@
   <!-- REQUEST FLOW -->
   <h2>One request, end to end</h2>
   <div class="flow">
-    <div class="step"><span class="num">1</span><div><b>Query in</b> — handheld → LoRa mesh → Node (RX) → BLE → <code>bot.py</code> (passes the <code>?</code> prefix filter).</div></div>
-    <div class="step"><span class="num">2</span><div><b>RAG retrieve</b> — <code>bot.py</code> embeds the query via <code>/v1/embeddings</code>; <code>retriever.py</code> runs cosine top-k against <code>index.json</code>. If the top score is <span class="refuse">&lt; 0.40 → refuse before the LLM call</span>; otherwise prepend the matched chunks as context.</div></div>
-    <div class="step"><span class="num">3</span><div><b>LLM generate</b> — <code>bot.py</code> → <code>/v1/chat/completions</code> (co-pilot, temp 0.1, <code>/no_think</code>) → answer.</div></div>
+    <div class="step"><span class="num">1</span><div><b>Query in</b> — handheld → LoRa mesh → Node (RX) → BLE → <code>basestation.py</code> (passes the <code>?</code> prefix filter).</div></div>
+    <div class="step"><span class="num">2</span><div><b>RAG retrieve</b> — <code>basestation.py</code> embeds the query via <code>/v1/embeddings</code>; <code>retriever.py</code> runs cosine top-k against <code>index.json</code>. If the top score is <span class="refuse">&lt; 0.40 → refuse before the LLM call</span>; otherwise prepend the matched chunks as context.</div></div>
+    <div class="step"><span class="num">3</span><div><b>LLM generate</b> — <code>basestation.py</code> → <code>/v1/chat/completions</code> (co-pilot, temp 0.1, <code>/no_think</code>) → answer.</div></div>
     <div class="step"><span class="num">4</span><div><b>Reply out</b> — <code>clean_reply()</code> strips empty <code>&lt;think&gt;</code> shells → chunker splits to ≤200B (never mid-codepoint) → sendText DM → Node (TX) → LoRa mesh → handheld.</div></div>
   </div>
 

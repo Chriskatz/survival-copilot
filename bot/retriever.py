@@ -65,7 +65,7 @@ class Retriever:
     ) -> None:
         if not index_path.exists():
             raise FileNotFoundError(
-                f"{index_path} not found — run `python bot/index.py` first."
+                f"{index_path} not found — run `python bot/build_index.py` first."
             )
         data = json.loads(index_path.read_text(encoding="utf-8"))
         self.model = data["model"]

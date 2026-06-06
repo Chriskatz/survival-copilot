@@ -5,7 +5,7 @@ the local QVAC embeddings endpoint for each chunk, writes index.json atomically.
 
 Run from project root inside venv, **after** `qvac serve openai` is up:
 
-    python bot/index.py
+    python bot/build_index.py
 
 Re-run whenever you edit / add markdown in knowledge/. Index is overwritten in
 place.
