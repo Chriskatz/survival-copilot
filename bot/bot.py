@@ -8,10 +8,13 @@ Run:
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
+import shutil
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -72,6 +75,37 @@ REFUSE_MSG = "不在我的求生知識範圍 — 此頻道僅回答野外求生 
 def _is_chinese(text: str) -> bool:
     cjk = sum(1 for c in text if "一" <= c <= "鿿")
     return cjk >= max(1, len(text) // 5)
+
+
+_LANGDETECT_JS = HERE.parent / "tools" / "langdetect.mjs"
+_NODE = shutil.which("node")
+
+
+def detect_lang(text: str) -> tuple[str, str]:
+    """Detect the query language to route the reply.
+
+    Primary: QVAC ``@qvac/langdetect-text`` via ``tools/langdetect.mjs``.
+    Fallback: CJK-ratio heuristic if the Node helper is missing or errors.
+    Returns ``(routing, detail)`` where ``routing`` is ``"zh"`` or ``"en"``
+    (the languages our corpus answers in) and ``detail`` is logged for audit.
+    """
+    if _NODE and _LANGDETECT_JS.exists():
+        try:
+            out = subprocess.run(
+                [_NODE, str(_LANGDETECT_JS), text],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                data = json.loads(out.stdout)
+                code = (data.get("code") or "").lower()
+                prob = data.get("probability") or 0.0
+                routing = "zh" if code.startswith("zh") else "en"
+                return routing, f"qvac-langdetect:{code} ({prob:.2f})"
+        except Exception as e:  # noqa: BLE001
+            log.debug("langdetect helper failed, using heuristic: %s", e)
+    return ("zh" if _is_chinese(text) else "en"), "cjk-heuristic"
 
 
 def _format_chunk_for_prompt(hit, lang: str) -> str:
@@ -237,7 +271,8 @@ def ask_llm(question: str, retriever: Retriever) -> tuple[str, list]:
     if not hits:
         return REFUSE_MSG, []
 
-    context_lang = "zh" if _is_chinese(question) else "en"
+    context_lang, lang_detail = detect_lang(question)
+    log.info("lang routing: %s (%s)", context_lang, lang_detail)
     context = "\n\n".join(
         _format_chunk_for_prompt(h, context_lang) for h in hits
     )
