@@ -1,0 +1,60 @@
+# Remote API Disclosure — Survival Co-pilot
+#
+# QVAC Hackathon I submission requirement: a structured file listing every
+# remote API call the project uses, for transparency.
+#
+# SUMMARY: At RUNTIME (inference, RAG, mesh I/O) the application makes ZERO
+# remote API calls. All inference is 100% on-device via @qvac/sdk. The only
+# network activity is one-time PROVISIONING (downloading model weights and npm
+# dependencies) before the demo runs. There is no cloud inference and no cloud
+# fallback anywhere in the request path.
+
+schema: qvac-remote-api-disclosure/v1
+project: Survival Co-pilot
+
+runtime:
+  # Calls made while the product is actually serving queries (the demo path:
+  # LoRa mesh -> bot.py -> qvac serve -> LLM/RAG -> mesh reply).
+  remote_api_calls: none
+  detail: >
+    Every network call in application code targets the loopback interface
+    (127.0.0.1) or the local LoRa radio over BLE. No request leaves the device.
+  local_only_endpoints:
+    - name: QVAC OpenAI-compatible server (chat/completions)
+      endpoint: http://127.0.0.1:11434/v1/chat/completions
+      transport: local HTTP (loopback)
+      purpose: LLM inference (co-pilot = QWEN3_1_7B_INST_Q4) via @qvac/sdk
+      remote: false
+    - name: QVAC OpenAI-compatible server (embeddings)
+      endpoint: http://127.0.0.1:11434/v1/embeddings
+      transport: local HTTP (loopback)
+      purpose: RAG query/corpus embeddings (embed-mlm = EMBEDDINGGEMMA_300M_Q4_0) via @qvac/sdk
+      remote: false
+    - name: Meshtastic LoRa radio
+      endpoint: local BLE (meshtastic-python)
+      transport: Bluetooth Low Energy to a locally paired radio
+      purpose: receive queries / send replies over the LoRa mesh
+      remote: false
+
+provisioning:
+  # One-time setup BEFORE the demo. Not on the request path; no user data sent.
+  - name: QVAC model registry
+    operator: handled by @qvac/sdk (not application code)
+    transport: QVAC decentralized registry (Holepunch / P2P) — not a cloud REST API
+    when: first run / model download
+    data_sent: none (no user data; fetch of public model artifacts only)
+    purpose: download GGUF model weights (Qwen3-1.7B Q4, EmbeddingGemma 300M Q4)
+    required_at_runtime: false
+  - name: npm registry
+    operator: npm (build tooling, not application code)
+    endpoint: https://registry.npmjs.org
+    when: npm install
+    data_sent: none (standard package resolution)
+    purpose: install @qvac/sdk and dependencies
+    required_at_runtime: false
+
+cloud_inference: none
+cloud_fallback: none
+telemetry: none
+analytics: none
+third_party_data_providers: none
