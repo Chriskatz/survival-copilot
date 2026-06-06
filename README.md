@@ -1,152 +1,145 @@
 # Survival Co-pilot
 
-> QVAC Hackathon I — *Unleash Edge AI* entry
+> **QVAC Hackathon I — _Unleash Edge AI_ entry.** Off-grid **survival & rescue** AI for when the network goes down — whether a disaster knocks out telecom or you are simply beyond all cell and internet coverage.
 
-> ⚠️ **DEMO ONLY — DO NOT USE IN ACTUAL EMERGENCIES** ⚠️
-> This project demonstrates a local-AI-over-LoRa architecture for a hackathon. The bundled Qwen3-1.7B model has **no medical / survival expertise** and may produce dangerously wrong instructions. In a real emergency, call 119 / 112 / local SAR. The RAG layer (planned next) will ground answers in verified sources; until then, treat every reply as illustrative of the *pipeline*, not the *advice*.
+> ⚠️ **DEMO ONLY — DO NOT RELY ON THIS IN A REAL EMERGENCY** ⚠️
+> A hackathon demo of a local-AI-over-LoRa architecture. Answers are grounded in a small bundled corpus via RAG, but the model is a 1.7B LLM and the corpus is a seed — replies may still be wrong or incomplete. In a real emergency call 119 / 112 / your local SAR. LoRa replies are prefixed `[demo]`.
 
-Off-grid **survival & rescue** AI for when the network goes down — disaster zones (earthquake, typhoon, tsunami, war) or remote no-signal areas. People on the ground carry handheld **Meshtastic** LoRa radios; a base-station MacBook with a **LoRa / Meshtastic Node** over BLE runs a **local LLM via the QVAC SDK** and auto-answers questions over the mesh. No cloud. No cell signal needed. No central point of failure.
+People on the ground carry handheld **Meshtastic** LoRa radios. A base station (a laptop today, a solar-powered single-board computer tomorrow) runs a **fully on-device LLM + RAG through the [QVAC SDK](https://qvac.tether.io/)** and auto-answers questions over the mesh. **No internet. No cell signal. No cloud. No central point of failure.**
 
 ## Why this fits QVAC
 
-QVAC's thesis is that AI must run *privately, locally, without permission*. A disaster zone or the deep backcountry is the literal proving ground: when the network is down, the AI must still work — and lives may depend on it.
+QVAC's thesis is that AI must run *privately, locally, and without permission on any device*. A total signal blackout — from disaster or sheer remoteness — is the literal proving ground: when the network is down, the AI must still work, and lives may depend on it. This project demonstrates QVAC delivering the four things edge AI should beat the cloud on:
+
+- **Private** — every query and answer stays on the device; no cloud ever sees it.
+- **Resilient** — works with towers, grid, and internet gone; the mesh has no single point to knock out.
+- **Fast** — local inference answers in seconds, with no datacentre round-trip you couldn't reach anyway.
+- **Low-cost** — runs on a laptop / Pi; no cloud bills, no per-call fees, no vendor lock-in.
+
+**All inference runs through `@qvac/sdk`** — both the chat LLM and the RAG embeddings. There is no other inference path and no cloud fallback.
 
 ## Architecture
 
 ```
-[Handheld Meshtastic]──LoRa──▶[mesh peers]──LoRa──▶[LoRa / Meshtastic Node]
+[Handheld Meshtastic] ──LoRa──▶ [mesh relays] ──LoRa──▶ [LoRa / Meshtastic Node]
                                                                   │ BLE
                                                                   ▼
-                                                  ┌─────────────────────────┐
-                                                  │ MacBook (base station)  │
-                                                  │  Python bot.py          │  ←── meshtastic-python BLE
-                                                  │       │                 │
-                                                  │       ▼ HTTP            │
-                                                  │  qvac serve openai      │  ←── @qvac/sdk LLM (Node)
-                                                  └─────────────────────────┘
+                                  ┌───────────────────────────────────────────┐
+                                  │ Base station (laptop / SBC) — 100% local    │
+                                  │                                             │
+                                  │  bot.py (Python)  ──HTTP──▶ qvac serve openai│
+                                  │   owns BLE, RAG retrieve,    @qvac/sdk:      │
+                                  │   chunk ≤200B                · co-pilot (LLM)│
+                                  │                              · embed-mlm     │
+                                  └───────────────────────────────────────────┘
 ```
 
-Two co-operating processes on the Mac:
-- **`qvac serve openai`** — Node, runs the local LLM, exposes an OpenAI-compatible HTTP API on `127.0.0.1:11434`.
-- **`bot/bot.py`** — Python, owns the BLE radio, listens on `meshtastic.receive`, asks the LLM, chunks the reply to ≤200 bytes, sends back.
+Two co-operating processes, bridged by a local HTTP API:
 
-Why split: Meshtastic's BLE stack is native-Python-friendly on macOS; QVAC SDK is Node-only. The OpenAI HTTP layer is the clean bridge.
+- **`qvac serve openai`** (Node, `@qvac/sdk`) — loads the LLM **and** the embedding model, exposes an OpenAI-compatible API on `127.0.0.1:11434`.
+- **`bot/bot.py`** (Python) — owns the BLE radio (`meshtastic-python`), embeds the query + retrieves top-k from the local corpus (RAG), refuses out-of-scope questions, calls the LLM, chunks the reply to ≤200 bytes, sends it back.
 
-## Stack
+Why split: `meshtastic-python`'s BLE is stable on macOS; the QVAC SDK is Node. The local HTTP layer is the clean, cloud-free bridge. Full visual: open `architecture.html` (zh) / `architecture.en.html` (en).
 
-- **Mesh**: [`meshtastic`](https://pypi.org/project/meshtastic/) (Python) over BLE to LoRa / Meshtastic Node
-- **AI**: [`@qvac/sdk`](https://docs.qvac.tether.io/) — `QWEN3_1_7B_INST_Q4` (~1 GB RAM, strong zh-TW)
-- **Bridge**: QVAC OpenAI-compat HTTP at `http://127.0.0.1:11434/v1`
-- **Chunker**: 200-byte UTF-8-safe segmentation (TS + Python copies, same algorithm, both unit-tested)
+## Requirements (BYOH)
 
-## Run order
+- **Node 22** (see `.nvmrc`) and **Python 3.10+**
+- macOS or Linux
+- For the full mesh path: a **Meshtastic** device reachable over **BLE** (any model). *Not required* to reproduce the AI core — see the no-hardware path below.
 
-> **Quit the Meshtastic.app GUI first.** macOS BLE is single-owner — if the GUI holds the connection, the bot can't take it.
+## Setup & run (reproducible)
 
 ```bash
-# Terminal 1 — LLM server
-cd /path/to/QVAC
-npm install                    # one-time
-npx qvac doctor                # one-time host sanity check
-npx qvac serve openai -v       # auto-loads qvac.config.json → alias "co-pilot"
-
-# Terminal 2 — Meshtastic bot
-cd /path/to/QVAC
+git clone <this-repo> QVAC && cd QVAC
+npm install                                   # QVAC SDK + CLI
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r bot/requirements.txt
-cp bot/.env.example bot/.env   # edit if you want a specific BLE name/address
+```
+
+**1. Start the QVAC server** (Terminal A) — loads `co-pilot` (LLM) + `embed-mlm` (embeddings) from `qvac.config.json`:
+
+```bash
+npx qvac serve openai            # or: ./node_modules/.bin/qvac serve openai
+```
+
+**2. (Re)build the RAG index** — only needed if you edit `knowledge/*.md`; `knowledge/index.json` is committed:
+
+```bash
+python bot/index.py              # embeds every corpus chunk via @qvac/sdk /v1/embeddings
+```
+
+**3a. Reproduce the AI core WITHOUT any radio** (recommended for reviewers):
+
+```bash
+python bot/check_embed.py                 # sanity-check embeddings (prints a 768-dim vector)
+python bot/smoketest.py "bitten by a snake — what do I do"   # full RAG + LLM, no BLE
+python bot/smoketest.py "what's the bitcoin price"           # off-topic → refused before the LLM
+```
+
+**3b. Full mesh path** (Terminal B) — **quit the Meshtastic.app GUI first** (macOS BLE is single-owner):
+
+```bash
+cp bot/.env.example bot/.env     # optionally set MESH_BLE_ADDRESS / BASE_LAT / BASE_LON
 python bot/bot.py
 ```
 
-Then from a handheld Meshtastic device, send `?有人被蛇咬怎麼辦` on the primary channel. The bot replies in chunks.
+Then from a handheld Meshtastic device, send `?bitten by a snake — what do I do` (note the `?` prefix). The bot DMs a chunked, grounded reply.
 
-## Bot behaviour & knobs
-
-Edit `bot/.env`:
+## Configuration (`bot/.env`)
 
 | Var | Default | Effect |
 |---|---|---|
-| `MESH_BLE_ADDRESS` | empty | Specific device name/MAC; empty = auto-pick |
-| `QVAC_BASE_URL` | `http://127.0.0.1:11434/v1` | Where the LLM HTTP lives |
-| `QVAC_MODEL` | `co-pilot` | Model alias defined in `qvac.config.json` (maps to `QWEN3_1_7B_INST_Q4`) |
-| `TRIGGER_PREFIX` | `?` | Only respond to messages starting with this. Empty = answer everything (noisy!) |
-| `REPLY_MODE` | `dm` | `dm` = direct to sender, `channel` = reply on same channel |
-| `SEND_INTERVAL_S` | `2.0` | Gap between segments, friendly to LoRa duty cycle |
-| `MAX_REPLY_CHARS` | `600` | Hard cap before chunking, keeps on-air time sane |
+| `MESH_BLE_ADDRESS` | empty | Specific node name/MAC; empty = auto-pick first Meshtastic peripheral |
+| `QVAC_BASE_URL` | `http://127.0.0.1:11434/v1` | Local QVAC OpenAI-compatible endpoint |
+| `QVAC_MODEL` | `co-pilot` | LLM alias in `qvac.config.json` (→ `QWEN3_1_7B_INST_Q4`) |
+| `QVAC_EMBED_MODEL` | `embed-mlm` | Embedding alias (→ `EMBEDDINGGEMMA_300M_Q4_0`) |
+| `TRIGGER_PREFIX` | `?` | Only answer messages starting with this. Empty = answer everything |
+| `REPLY_MODE` | `dm` | `dm` = direct to sender · `channel` = same channel |
+| `SEND_INTERVAL_S` | `2.0` | Gap between LoRa segments (duty-cycle friendly) |
+| `MAX_REPLY_CHARS` | `1000` | Hard cap before chunking |
+| `BASE_LAT` / `BASE_LON` / `BASE_ALT` | empty | Base-station location → enables distance/bearing to senders in the log |
+
+## How RAG keeps answers grounded
+
+- Corpus: `knowledge/{zh,en}/*.md` (bilingual survival topics), split by `##` heading into chunks.
+- `bot/index.py` embeds each chunk via `@qvac/sdk` (**EmbeddingGemma 300M Q4**, L2-normalized 768-dim) → `knowledge/index.json`.
+- `bot/retriever.py` loads the index and returns cosine top-k for each query. **Cross-lingual**: a Chinese query retrieves relevant English chunks and vice versa.
+- **Refuse, don't hallucinate**: if the top score is below `0.40`, the bot replies "out of scope" **before** the LLM runs — no confident wrong answers on life-critical topics.
+
+## Models (aliases in `qvac.config.json`)
+
+| Alias | Model | Role |
+|---|---|---|
+| `co-pilot` | `QWEN3_1_7B_INST_Q4` | chat / completions (strong zh-TW, ~1 GB RAM) |
+| `embed-mlm` | `EMBEDDINGGEMMA_300M_Q4_0` | embeddings for RAG (multilingual, ~150 MB Q4) |
+
+Upgrade path: point `QVAC_MODEL` at a larger GGUF alias (e.g. Qwen2.5-7B) if the base station has ≥16 GB RAM.
 
 ## Project layout
 
 ```
-src/                          (Node side, mostly future RAG / model loader)
-  index.ts                    demo: print system prompt + chunked sample
-  mesh/chunker.{ts,test.ts}   200-byte UTF-8-safe segmentation (TS)
-  llm/prompts.ts              system prompt
-  llm/model.ts                chosen QVAC model constant
-bot/                          (Python side, owns the radio)
-  bot.py                      mesh receive → QVAC HTTP → chunk → send
-  chunker.py                  Python mirror of TS chunker
-  chunker_test.py             unittest, mirrors the TS test set
-  system_prompt.txt           same prompt, kept readable for fast iteration
-  requirements.txt
-  .env.example
-knowledge/                    offline reference corpus for RAG (todo)
+bot/                  Python base-station bot (owns the radio + RAG)
+  bot.py              mesh receive → RAG retrieve → QVAC LLM → chunk → send
+  index.py            build knowledge/index.json via @qvac/sdk embeddings
+  retriever.py        numpy cosine top-k retriever (threshold 0.40 → refuse)
+  smoketest.py        full RAG + LLM flow WITHOUT BLE (no-hardware repro)
+  check_embed.py      embeddings sanity check
+  chunker.py          200-byte UTF-8-safe LoRa segmentation
+  system_prompt.txt   system prompt (read at startup)
+  .env.example        all runtime knobs
+knowledge/{zh,en}/    bilingual RAG corpus  ·  index.json (built artifact)
+qvac.config.json      QVAC model aliases (co-pilot + embed-mlm)
+architecture.html / .en.html / .md   system diagrams
+slides.html           pitch deck (open in a browser, arrow keys to navigate)
+src/                  legacy TS scaffold (chunker + prompt; not on the runtime path)
 ```
 
-## What's done
+## Constraints
 
-- ✅ Project scaffold, strict TypeScript, ESM
-- ✅ LoRa chunker — TS + Python, both UTF-8 safe, both tested (6/6 passing in Python)
-- ✅ System prompt tuned for terse, life-critical, language-mirroring replies
-- ✅ Python BLE bot wired end-to-end: subscribe → trigger filter → LLM call → chunked send
-- ✅ Self-message filter so the bot doesn't reply to itself
+- **~200 bytes** per LoRa text segment (UTF-8-safe, never split mid-codepoint).
+- **No cloud calls anywhere** — all inference is local via `@qvac/sdk`; if a dependency needs the network, it doesn't ship.
+- **BLE is single-owner** on macOS — the bot and the Meshtastic GUI can't both hold the radio.
 
-## What's next
+## License
 
-1. **First end-to-end test** — quit GUI, start `qvac serve openai`, run bot, send `?test` from a handheld.
-2. **RAG layer** — embed `knowledge/*.md` on QVAC side, retrieve top-k per query, prepend to the user message in `ask_llm()`.
-3. **Demo script** — pre-baked queries (snake bite, lost, mushroom), record short video for judges.
-4. **Optional polish** — rate limit per sender (1 req / 30 s), persistent log of Q/A pairs, simple TUI showing live conversations.
-
-## Model choice
-
-`QWEN3_1_7B_INST_Q4` (1.7B, Q4, ~1 GB RAM). Recorded in `src/llm/model.ts` and `bot/.env`.
-
-Picked because:
-- Qwen family has the strongest zh-TW / zh-CN support among small open models — field queries in Chinese must work.
-- 1.7B Q4 keeps total round-trip under ~10 s on M-series, leaving budget for LoRa transit.
-- Pairs with RAG over `knowledge/` to cover medical / botanical specifics the small model doesn't recall.
-
-Rejected:
-- `QWEN3_600M_INST_Q4` — too small, hallucinates on life-critical answers.
-- `LLAMA_3_2_1B_INST_Q4_0` — weak Chinese.
-- QVAC `MedPsy-1.7B / 4B` — English-only and medical-only; our survival / disaster scope is broader.
-
-Upgrade path: swap `QVAC_MODEL` to a Qwen2.5-7B-Instruct GGUF alias if the demo laptop has ≥16 GB RAM and ~20 s response time is acceptable.
-
-## Demo-safe question bank
-
-Until RAG is wired, the small model hallucinates on medical specifics. For first end-to-end tests + judge demos, use **low-stakes** questions where wrong details don't endanger anyone:
-
-- `?用樹枝怎麼生火`
-- `?怎麼用北斗七星找北方`
-- `?雙繩結怎麼打`
-- `?哪些昆蟲不能碰`
-- `?手機沒訊號怎麼求救`
-- `?自我介紹一下你是誰`(meta-check the bot is alive)
-
-Avoid until RAG is in:
-- Specific medical dosages, snake-bite protocol, mushroom edibility, dehydration thresholds — these need verified sources, not a 1.7B model's guesses.
-
-## Roadmap to trustworthy answers
-
-1. **Now**: local LLM behind LoRa, replies prefixed `[demo]`, README disclaimer ✅
-2. **Next**: RAG layer — embed verified survival/first-aid corpus (Wilderness Medical Society PDFs, Red Cross zh-TW, MSF) via `/v1/embeddings`, retrieve top-k per query, pass as context.
-3. **Later**: refuse-to-answer guardrail (if RAG retrieves nothing relevant, reply `不在我的知識範圍內,請 SOS`).
-4. **Stretch**: structured output for triage (JSON with `severity / action / sos_recommended`).
-
-## Constraints to remember
-
-- **228 bytes** is the safe LoRa text-payload ceiling; we target **200** with an 8-byte header reserve.
-- **Never invent** medical dosages, plant edibility, or geographic facts — system prompt enforces this; RAG will reinforce.
-- **No cloud calls anywhere.** If a dependency needs network, it doesn't ship.
-- **BLE is single-owner** on macOS. Bot vs. GUI app — only one at a time.
+[MIT](./LICENSE) — fully open-source, yours to run, modify, and ship with no vendor lock-in.
