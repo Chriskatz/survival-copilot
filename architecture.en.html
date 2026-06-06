@@ -165,47 +165,6 @@
 
   <div class="arrow up"><span class="head">▲</span><span class="bar"></span><span>④ Chunked reply (≤200B/segment) — BLE → Node → LoRa mesh → handheld</span></div>
 
-  <!-- DONATION LAYER -->
-  <h2 style="border-color:#e3b341">💛 Donation layer — optional, <span class="refuse">fully decoupled from Q&amp;A</span></h2>
-  <div class="layer" style="border-color:#e3b341">
-    <span class="ltag" style="color:#e3b341">Support the Station</span>
-    <div style="font-size:13px;color:var(--muted);margin:2px 0 12px">
-      Q&amp;A is free for everyone with <b style="color:#7ee787">zero wallet checks</b>. Donations purely support the station's long-term operation (power / maintenance / future solar mountain stations).
-    </div>
-    <div class="base-inner">
-      <div class="node">
-        <h3><span class="dot" style="background:#e3b341"></span>🌐 WDK donation page <span class="pill" style="background:#e3b341">at home</span></h3>
-        <div class="meta"><code>donate.html</code> · client-side signing · seed never leaves the browser</div>
-        <ul>
-          <li>amount: coffee $1 / battery $5 / sun $20, or free input</li>
-          <li>sign a "donation auth" → <code>!donate</code> string + QR</li>
-        </ul>
-      </div>
-      <div class="node">
-        <h3><span class="dot" style="background:#e3b341"></span>📡 Channel A — <code>!donate</code></h3>
-        <div class="meta">paste once on mesh · bot verifies Ed25519 + dedupes</div>
-        <ul>
-          <li>recorded as pending → settled on return</li>
-          <li>payload carries <code>station_id</code> (future multi-station)</li>
-        </ul>
-      </div>
-      <div class="node">
-        <h3><span class="dot" style="background:#e3b341"></span>📢 Channel B — <code>!support</code></h3>
-        <div class="meta">bot advertises TRON address + QR + lifetime total</div>
-        <ul>
-          <li>donate with any wallet · never touches the bot (trustless)</li>
-        </ul>
-      </div>
-      <div class="node seam" style="border-color:var(--llm)">
-        <h3><span class="dot c-llm"></span>⛓️ TRON USDT settlement</h3>
-        <div class="meta">batch-settle on return (demo: Nile testnet)</div>
-        <ul>
-          <li>one-way gift · no balance / no refunds</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
   <!-- REQUEST FLOW -->
   <h2>One request, end to end</h2>
   <div class="flow">

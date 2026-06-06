@@ -32,11 +32,6 @@ flowchart TB
         end
     end
 
-    subgraph DON["DONATION LAYER - optional, decoupled (Q&amp;A stays free)"]
-        DGEN["donate.html (at home)<br/>WDK client-side sign<br/>tiers $1/$5/$20 or free input"]
-        TRON["TRON USDT settlement<br/>batch on return - demo: Nile testnet<br/>one-way gift, no balance/refunds"]
-    end
-
     H   -- "1. ?query (LoRa mesh)" --> W
     W   -- "BLE (single-owner)"     --> BOT
     BOT -- "2. embed query (HTTP)"  --> EMB
@@ -48,17 +43,7 @@ flowchart TB
     LLM -- "answer"                 --> BOT
     BOT -- "BLE"                    --> W
     W   -- "4. chunked reply (LoRa mesh)" --> H
-
-    DGEN -. "channel A: !donate string + QR (on mesh)" .-> BOT
-    BOT  -. "verify Ed25519, queue pending" .-> TRON
-    BOT  -. "channel B: !support -> address + QR + lifetime total" .-> TRON
-    style DON fill:#2a2410,stroke:#e3b341
 ```
-
-> The dotted **donation layer** is optional and fully decoupled from the `?`
-> Q&A path, which has zero wallet checks. Donations fund the base station's
-> ongoing cost (power, maintenance) and the longer-term vision of solar-powered
-> stations in remote mountains — see `wallet/DESIGN.md` / `wallet/DESIGN.en.md`.
 
 ## Request flow
 
