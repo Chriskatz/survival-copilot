@@ -17,16 +17,53 @@ def chunk_for_mesh(text: str, max_bytes: int = DEFAULT_MAX_BYTES) -> list[str]:
     return [f"[{i + 1}/{total}] {body}" for i, body in enumerate(bodies)]
 
 
+_CJK_END = "。！？"
+_ASCII_END = ".!?"
+
+
+def _best_break(window: str) -> int | None:
+    """Index to cut ``window`` at for the most readable segment, or None to
+    hard-cut at the byte budget. Prefer a sentence end, else any whitespace.
+    Only break past the halfway point so segments don't come out tiny."""
+    half = len(window) // 2
+    for k in range(len(window) - 1, half - 1, -1):
+        ch = window[k]
+        if ch in _CJK_END or ch == "\n":
+            return k + 1
+        if ch in _ASCII_END:  # require ". " and skip list numbers like "1."
+            prev = window[k - 1] if k else ""
+            nxt = window[k + 1] if k + 1 < len(window) else " "
+            if not prev.isdigit() and nxt in " \n":
+                return k + 1
+    for k in range(len(window) - 1, half - 1, -1):
+        if window[k] in " \t\n":
+            return k + 1
+    return None
+
+
 def _pack_by_byte_budget(text: str, max_bytes: int) -> list[str]:
-    data = text.encode("utf-8")
-    if not data:
+    if not text:
         return [""]
     chunks: list[str] = []
-    offset = 0
-    while offset < len(data):
-        end = min(offset + max_bytes, len(data))
-        while end > offset and end < len(data) and (data[end] & 0xC0) == 0x80:
-            end -= 1
-        chunks.append(data[offset:end].decode("utf-8"))
-        offset = end
-    return chunks
+    i, n = 0, len(text)
+    while i < n:
+        # Grow char by char (never splitting a codepoint) up to the byte budget.
+        j, used = i, 0
+        while j < n:
+            cb = len(text[j].encode("utf-8"))
+            if used + cb > max_bytes:
+                break
+            used += cb
+            j += 1
+        if j >= n:
+            piece, i = text[i:n], n
+        else:
+            cut = _best_break(text[i:j])
+            if cut is None:  # no good break point — hard cut at the budget
+                piece, i = text[i:j], j
+            else:
+                piece, i = text[i:i + cut], i + cut
+        piece = piece.strip()
+        if piece:
+            chunks.append(piece)
+    return chunks or [""]
