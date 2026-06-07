@@ -12,6 +12,7 @@ import json
 import logging
 import math
 import os
+import random
 import shutil
 import signal
 import subprocess
@@ -42,6 +43,39 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger("copilot")
+
+
+def print_banner() -> None:
+    """Print a startup banner. Colorized only on a real TTY (honors NO_COLOR)."""
+    color = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+    def c(code: str, s: str) -> str:
+        return f"\033[{code}m{s}\033[0m" if color else s
+
+    teal, gold, red, dim = "36", "1;33", "31", "2"
+
+    # 7 left-hand motifs (5 lines each); one is picked at random per launch.
+    icons = [
+        ["    .—.", "  .-(   )-.", " (  ( o )  )", "  '-(   )-'", "    '—'"],            # satellite dish
+        ["   .ıllı.", "     ||", "    /||\\", "   //||\\\\", "  ''----''"],              # antenna + waves
+        [" ((  o  ))", "  ( ( ) )", "   (   )", "    ( )", "     o"],                    # broadcast rings
+        ["     ((o))", "   /\\  |", "  /  \\ |", " / /\\ \\|", "/_/  \\_\\"],            # mountain + signal
+        [" o——o——o", " |╲ | ╱|", " o——@——o", " |╱ | ╲|", " o——o——o"],                  # mesh nodes
+        ["  .-\"\"-.", " / .--. \\", " | |  | |", " \\ '--' /", "  '-..-'"],            # life ring (SOS)
+        ["    N", "  .-'-.", " ( <o> )", "  '-.-'", "    S"],                            # compass
+    ]
+    icon = random.choice(icons)
+    rows = [
+        c(gold, "S U R V I V A L   C O - P I L O T"),
+        c(dim, "──────────────────────────────────"),
+        "off-grid survival & rescue AI",
+        "LoRa mesh  ·  100% on-device  ·  " + c(gold, "QVAC SDK"),
+        c(red, "⚠  demo only — in a real emergency call 119 / 112"),
+    ]
+    print()
+    for ic, tx in zip(icon, rows):
+        print("  " + c(teal, ic.ljust(12)) + "   " + tx)
+    print()
 
 
 BLE_ADDRESS = os.getenv("MESH_BLE_ADDRESS") or None
@@ -387,6 +421,7 @@ class CopilotBot:
 
 
 def main() -> None:
+    print_banner()
     log.info("Loading RAG index…")
     retriever = Retriever()
 
