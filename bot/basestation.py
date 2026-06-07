@@ -61,14 +61,13 @@ def print_banner() -> None:
 
     teal, gold, red, dim = "36", "1;33", "31", "2"
 
-    # 7 left-hand motifs (5 lines each); one is picked at random per launch.
+    # 6 left-hand motifs (5 lines each); one is picked at random per launch.
     icons = [
         ["    .—.", "  .-(   )-.", " (  ( o )  )", "  '-(   )-'", "    '—'"],            # satellite dish
         ["   .ıllı.", "     ||", "    /||\\", "   //||\\\\", "  ''----''"],              # antenna + waves
         [" ((  o  ))", "  ( ( ) )", "   (   )", "    ( )", "     o"],                    # broadcast rings
         ["     ((o))", "   /\\  |", "  /  \\ |", " / /\\ \\|", "/_/  \\_\\"],            # mountain + signal
         [" o——o——o", " |╲ | ╱|", " o——@——o", " |╱ | ╲|", " o——o——o"],                  # mesh nodes
-        ["  .-\"\"-.", " / .--. \\", " | |  | |", " \\ '--' /", "  '-..-'"],            # life ring (SOS)
         ["    N", "  .-'-.", " ( <o> )", "  '-.-'", "    S"],                            # compass
     ]
     icon = random.choice(icons)
@@ -77,7 +76,7 @@ def print_banner() -> None:
         c(dim, "──────────────────────────────────"),
         "off-grid survival & rescue AI",
         "LoRa mesh  ·  100% on-device  ·  " + c(gold, "QVAC SDK"),
-        c(red, "⚠  demo only — in a real emergency call 119 / 112"),
+        c(red, "⚠  demo only — in a real emergency call 911 / 112"),
     ]
     print()
     for ic, tx in zip(icon, rows):
@@ -111,7 +110,8 @@ BASE_ALT = _env_float("BASE_ALT")
 
 SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 
-REFUSE_MSG = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,優先 SOS 求救"
+REFUSE_MSG_ZH = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,優先 SOS 求救"
+REFUSE_MSG_EN = "Outside my survival scope — this channel only answers wilderness survival / first aid / navigation / rescue. Call SOS first."
 
 
 def _is_chinese(text: str) -> bool:
@@ -309,12 +309,14 @@ def log_connected_node(interface) -> None:
 
 
 def ask_llm(question: str, retriever: Retriever) -> tuple[str, list]:
-    hits = retriever.retrieve(question, k=DEFAULT_TOP_K, min_score=DEFAULT_MIN_SCORE)
-    if not hits:
-        return REFUSE_MSG, []
-
+    # Detect language first so the refuse message matches the asker's language
+    # (retrieval is cross-lingual, so it doesn't need the language).
     context_lang, lang_detail = detect_lang(question)
     log.info("lang routing: %s (%s)", context_lang, lang_detail)
+
+    hits = retriever.retrieve(question, k=DEFAULT_TOP_K, min_score=DEFAULT_MIN_SCORE)
+    if not hits:
+        return (REFUSE_MSG_ZH if context_lang == "zh" else REFUSE_MSG_EN), []
     context = "\n\n".join(
         _format_chunk_for_prompt(h, context_lang) for h in hits
     )
