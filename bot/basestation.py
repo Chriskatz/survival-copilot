@@ -1,7 +1,11 @@
-"""Survival Co-pilot — Meshtastic BLE chatbot bridged to a local QVAC LLM.
+"""Survival Co-pilot — Meshtastic chatbot bridged to a local QVAC LLM.
+
+Transport: USB serial (set MESH_SERIAL_PORT) or BLE (default). For a stationary
+base station, USB serial is recommended — it avoids the macOS BLE silent-drop
+that stalls inbound packets.
 
 Run:
-    1. Quit the Meshtastic macOS app (BLE is single-owner).
+    1. If using BLE: quit the Meshtastic macOS app (BLE is single-owner).
     2. Start QVAC server:  qvac serve openai
     3. python bot/basestation.py
 """
@@ -12,10 +16,12 @@ import json
 import logging
 import math
 import os
+import queue
 import random
 import shutil
 import signal
 import subprocess
+import threading
 import sys
 import time
 from pathlib import Path
@@ -30,6 +36,7 @@ from retriever import DEFAULT_MIN_SCORE, DEFAULT_TOP_K, Retriever
 
 try:
     from meshtastic.ble_interface import BLEInterface
+    from meshtastic.serial_interface import SerialInterface
 except ImportError as e:
     sys.exit(f"meshtastic library not installed. pip install -r bot/requirements.txt\n  ({e})")
 
@@ -38,7 +45,7 @@ HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
 )
@@ -79,6 +86,7 @@ def print_banner() -> None:
 
 
 BLE_ADDRESS = os.getenv("MESH_BLE_ADDRESS") or None
+SERIAL_PORT = os.getenv("MESH_SERIAL_PORT") or None
 QVAC_BASE_URL = os.getenv("QVAC_BASE_URL", "http://127.0.0.1:11434/v1")
 QVAC_MODEL = os.getenv("QVAC_MODEL", "QWEN3_1_7B_INST_Q4")
 TRIGGER_PREFIX = os.getenv("TRIGGER_PREFIX", "?")
@@ -346,7 +354,7 @@ def ask_llm(question: str, retriever: Retriever) -> tuple[str, list]:
 
 
 class CopilotBot:
-    def __init__(self, iface: BLEInterface, retriever: Retriever) -> None:
+    def __init__(self, iface: "BLEInterface | SerialInterface", retriever: Retriever) -> None:
         self.iface = iface
         self.retriever = retriever
         self.my_node_num: int | None = None
@@ -354,11 +362,24 @@ class CopilotBot:
             self.my_node_num = iface.myInfo.my_node_num  # type: ignore[union-attr]
         except Exception:
             log.warning("Could not read my_node_num; self-message filter disabled")
+        # Heavy RAG+LLM work runs here, NOT in the mesh reader thread. Blocking
+        # the (serial) reader thread for seconds breaks the stream and kills the
+        # process, so on_receive only enqueues and returns immediately.
+        self._jobs: queue.Queue = queue.Queue()
+        threading.Thread(target=self._worker, name="copilot-worker", daemon=True).start()
 
     def on_receive(self, packet: dict, interface) -> None:
+        """Mesh reader-thread callback — MUST be fast and non-blocking.
+
+        Parse and filter, then hand the question to the worker queue. Never run
+        the RAG/LLM call here: blocking the serial reader thread for seconds
+        corrupts the stream and the meshtastic interface tears the process down.
+        """
         try:
             decoded = packet.get("decoded") or {}
-            if decoded.get("portnum") != "TEXT_MESSAGE_APP":
+            portnum = decoded.get("portnum")
+            if portnum != "TEXT_MESSAGE_APP":
+                log.debug("rx %s from %s ch%s", portnum, packet.get("from"), packet.get("channel", 0))
                 return
             text = (decoded.get("text") or "").strip()
             if not text:
@@ -371,36 +392,50 @@ class CopilotBot:
             channel = packet.get("channel", 0)
             to = packet.get("to")
 
+            log.info("RX text from %s ch%s to %s: %r", sender, channel, to, text)
+
             if TRIGGER_PREFIX and not text.startswith(TRIGGER_PREFIX):
+                log.info("   ignored: missing %r trigger prefix", TRIGGER_PREFIX)
                 return
             question = text[len(TRIGGER_PREFIX):].strip() if TRIGGER_PREFIX else text
             if not question:
                 return
 
-            log.info("Q from %s ch%s: %s", sender, channel, question)
-            log.info("   sender: %s", sender_info(interface, sender))
-            hits: list = []
-            try:
-                answer, hits = ask_llm(question, self.retriever)
-            except Exception as e:
-                log.exception("LLM call failed")
-                answer = f"co-pilot error: {e}"
-
-            if hits:
-                log.info(
-                    "   RAG top-%d: %s",
-                    len(hits),
-                    ", ".join(f"{h.score:.2f} {h.chunk['source']}" for h in hits),
-                )
-            else:
-                log.info("   RAG: no hit ≥ %.2f → REFUSE", DEFAULT_MIN_SCORE)
-
-            if len(answer) > MAX_REPLY_CHARS:
-                answer = answer[:MAX_REPLY_CHARS].rstrip() + "…"
-
-            self.send_reply(answer, dest=sender, channel=channel)
+            self._jobs.put((question, sender, channel))
         except Exception:
             log.exception("on_receive crashed")
+
+    def _worker(self) -> None:
+        """Consume queued questions one at a time, off the mesh reader thread."""
+        while True:
+            question, sender, channel = self._jobs.get()
+            try:
+                log.info("Q from %s ch%s: %s", sender, channel, question)
+                log.info("   sender: %s", sender_info(self.iface, sender))
+                hits: list = []
+                try:
+                    answer, hits = ask_llm(question, self.retriever)
+                except Exception as e:
+                    log.exception("LLM call failed")
+                    answer = f"co-pilot error: {e}"
+
+                if hits:
+                    log.info(
+                        "   RAG top-%d: %s",
+                        len(hits),
+                        ", ".join(f"{h.score:.2f} {h.chunk['source']}" for h in hits),
+                    )
+                else:
+                    log.info("   RAG: no hit ≥ %.2f → REFUSE", DEFAULT_MIN_SCORE)
+
+                if len(answer) > MAX_REPLY_CHARS:
+                    answer = answer[:MAX_REPLY_CHARS].rstrip() + "…"
+
+                self.send_reply(answer, dest=sender, channel=channel)
+            except Exception:
+                log.exception("worker failed")
+            finally:
+                self._jobs.task_done()
 
     def send_reply(self, text: str, dest: int | None, channel: int) -> None:
         segments = chunk_for_mesh(text)
@@ -420,19 +455,92 @@ class CopilotBot:
             time.sleep(SEND_INTERVAL_S)
 
 
+def pick_ble_address(preset: str | None) -> str | None:
+    """Resolve which Meshtastic peripheral to connect to.
+
+    If MESH_BLE_ADDRESS is set, use it as-is. Otherwise scan and let the user
+    pick from the discovered devices (auto-picks when only one is found).
+    """
+    if preset:
+        return preset
+
+    log.info("Scanning for Meshtastic BLE devices…")
+    try:
+        devices = BLEInterface.scan()
+    except Exception as e:  # noqa: BLE001
+        sys.exit(f"BLE scan failed: {e}")
+
+    # De-dupe by address, preserve discovery order.
+    by_addr: dict = {}
+    for d in devices:
+        by_addr.setdefault(d.address, d)
+    devices = list(by_addr.values())
+
+    if not devices:
+        sys.exit(
+            "No Meshtastic BLE devices found. Power one on and bring it closer — "
+            "and quit the Meshtastic app first (macOS BLE is single-owner)."
+        )
+
+    if len(devices) == 1:
+        d = devices[0]
+        log.info("One device found: %s (%s) — connecting.", d.name, d.address)
+        return d.address
+
+    print("\n  Meshtastic devices found:")
+    for i, d in enumerate(devices, 1):
+        print(f"    [{i}] {d.name or '(unknown)'}  —  {d.address}")
+    print()
+
+    if not sys.stdin.isatty():
+        d = devices[0]
+        log.warning("Non-interactive input; defaulting to [1] %s (%s).", d.name, d.address)
+        return d.address
+
+    while True:
+        try:
+            choice = input(f"  Select device [1-{len(devices)}] (Enter = 1): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            sys.exit("\nNo device selected.")
+        if choice == "":
+            choice = "1"
+        if choice.isdigit() and 1 <= int(choice) <= len(devices):
+            d = devices[int(choice) - 1]
+            log.info("Selected %s (%s)", d.name, d.address)
+            return d.address
+        print("  Invalid choice — try again.")
+
+
+def connect_interface():
+    """Open the mesh link.
+
+    Prefer USB serial when MESH_SERIAL_PORT is set (``auto`` = let meshtastic
+    auto-detect the port). Serial avoids the macOS BLE notification-drop that
+    silently stalls inbound packets — the node keeps hearing LoRa but the Mac
+    stops getting "new packet" notifications. Falls back to BLE when unset.
+    """
+    if SERIAL_PORT:
+        dev = None if SERIAL_PORT.lower() == "auto" else SERIAL_PORT
+        log.info("Connecting USB serial… port=%s", dev or "auto-detect")
+        return SerialInterface(devPath=dev)
+    address = pick_ble_address(BLE_ADDRESS)
+    log.info("Connecting BLE… address=%r", address)
+    return BLEInterface(address=address)
+
+
 def main() -> None:
     print_banner()
     log.info("Loading RAG index…")
     retriever = Retriever()
 
-    log.info("Connecting BLE… address=%r", BLE_ADDRESS)
-    iface = BLEInterface(address=BLE_ADDRESS)
+    iface = connect_interface()
     log.info("Connected. QVAC=%s model=%s prefix=%r", QVAC_BASE_URL, QVAC_MODEL, TRIGGER_PREFIX)
     log_connected_node(iface)
 
     bot = CopilotBot(iface, retriever)
     pub.subscribe(bot.on_receive, "meshtastic.receive")
 
+    stop = threading.Event()
     sigint_count = 0
 
     def shutdown(signum, frame):  # noqa: ARG001
@@ -440,10 +548,7 @@ def main() -> None:
         sigint_count += 1
         if sigint_count == 1:
             log.info("Shutting down… (Ctrl+C again to force exit)")
-            try:
-                iface.close()
-            except Exception:
-                pass
+            stop.set()
         else:
             log.info("Force exit.")
             os._exit(0)
@@ -452,7 +557,15 @@ def main() -> None:
     signal.signal(signal.SIGTERM, shutdown)
 
     log.info("Listening. Send a mesh message starting with %r to trigger.", TRIGGER_PREFIX)
-    signal.pause()
+    # Wait on an Event, NOT a bare signal.pause(): pause() also returns on
+    # incidental signals such as SIGCHLD from the langdetect subprocess, which
+    # would let main() fall through and quietly exit the bot mid-reply.
+    while not stop.is_set():
+        stop.wait(60)
+    try:
+        iface.close()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
