@@ -24,6 +24,7 @@ import subprocess
 import threading
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -61,10 +62,8 @@ def print_banner() -> None:
 
     teal, gold, red, dim = "36", "1;33", "31", "2"
 
-    # 6 left-hand motifs (5 lines each); one is picked at random per launch.
+    # 4 left-hand motifs (5 lines each); one is picked at random per launch.
     icons = [
-        ["    .—.", "  .-(   )-.", " (  ( o )  )", "  '-(   )-'", "    '—'"],            # satellite dish
-        ["   .ıllı.", "     ||", "    /||\\", "   //||\\\\", "  ''----''"],              # antenna + waves
         [" ((  o  ))", "  ( ( ) )", "   (   )", "    ( )", "     o"],                    # broadcast rings
         ["     ((o))", "   /\\  |", "  /  \\ |", " / /\\ \\|", "/_/  \\_\\"],            # mountain + signal
         [" o——o——o", " |╲ | ╱|", " o——@——o", " |╱ | ╲|", " o——o——o"],                  # mesh nodes
@@ -93,6 +92,10 @@ REPLY_MODE = os.getenv("REPLY_MODE", "dm").lower()
 SEND_INTERVAL_S = float(os.getenv("SEND_INTERVAL_S", "2.0"))
 MAX_REPLY_CHARS = int(os.getenv("MAX_REPLY_CHARS", "600"))
 
+# Search-and-rescue log: one JSON line per inbound text message with the
+# sender's full last-known telemetry (GPS, power, RF link). Set to "" to disable.
+RESCUE_LOG_PATH = os.getenv("RESCUE_LOG_PATH") or str(HERE.parent / "evidence" / "rescue_log.jsonl")
+
 
 def _env_float(name: str):
     v = os.getenv(name)
@@ -110,13 +113,30 @@ BASE_ALT = _env_float("BASE_ALT")
 
 SYSTEM_PROMPT = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 
-REFUSE_MSG_ZH = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,優先 SOS 求救"
-REFUSE_MSG_EN = "Outside my survival scope — this channel only answers wilderness survival / first aid / navigation / rescue. Call SOS first."
+REFUSE_MSG_ZH = "不在我的求生知識範圍 — 此頻道僅回答野外求生 / 急救 / 導航 / 救援問題,危急時請優先發出求救信號"
+REFUSE_MSG_EN = "Outside my survival scope — this channel only answers wilderness survival / first aid / navigation / rescue. In danger, signal for rescue first."
+
+# Generic "help" is too vague for RAG (it pulls unrelated chunks and the model
+# stitches a nonsense answer), so treat it as a command with a fixed usage reply.
+HELP_KEYWORDS = {
+    "help", "help me", "?", "??", "menu", "commands", "command", "start", "info",
+    "幫助", "幫忙", "說明", "使用說明", "指令", "選單", "怎麼用", "怎麼問",
+}
+HELP_MSG_ZH = "求生副手 — 請問一個具體問題,我會依手冊回答。可問:蛇咬、失溫、迷路/導航、地震、洪水、停電。範例:?被蛇咬怎麼辦"
+HELP_MSG_EN = "Survival co-pilot — ask a specific question and I answer from the field manual. Topics: snake bite, hypothermia, lost/navigation, earthquake, flood, power outage. e.g. ?snake bite what do I do"
 
 
 def _is_chinese(text: str) -> bool:
     cjk = sum(1 for c in text if "一" <= c <= "鿿")
     return cjk >= max(1, len(text) // 5)
+
+
+def help_reply(question: str) -> str | None:
+    """Return a usage message if the question is a generic help command, else None."""
+    norm = question.strip().lower().strip("?？!！。.、, ")
+    if norm in HELP_KEYWORDS:
+        return HELP_MSG_ZH if _is_chinese(question) else HELP_MSG_EN
+    return None
 
 
 _LANGDETECT_JS = HERE.parent / "tools" / "langdetect.mjs"
@@ -270,6 +290,92 @@ def sender_info(interface, node_num: int | None) -> str:
         return f"telemetry lookup failed: {e}"
 
 
+def _lookup_node(interface, node_num):
+    if node_num is None:
+        return None
+    node = (getattr(interface, "nodesByNum", None) or {}).get(node_num)
+    if node is None:
+        for n in (getattr(interface, "nodes", None) or {}).values():
+            if n.get("num") == node_num:
+                return n
+    return node
+
+
+def record_rescue_log(interface, packet: dict, text: str) -> None:
+    """Append one JSON line of the sender's last-known telemetry per inbound
+    text message — identity, GPS, power, and RF link — for search-and-rescue.
+
+    Values come from the local node DB (filled by the sender's periodic
+    Position/Telemetry broadcasts, so position/power are LAST-KNOWN, not
+    real-time) plus this packet's live RF metadata. Never raises.
+    """
+    if not RESCUE_LOG_PATH:
+        return
+    try:
+        sender = packet.get("from")
+        node = _lookup_node(interface, sender) or {}
+        user = node.get("user") or {}
+        pos = node.get("position") or {}
+        dm = node.get("deviceMetrics") or {}
+
+        rec: dict = {
+            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "rx_time": packet.get("rxTime"),
+            "from_num": sender,
+            "from_id": user.get("id") or packet.get("fromId"),
+            "long_name": user.get("longName"),
+            "short_name": user.get("shortName"),
+            "hw_model": user.get("hwModel"),
+            "role": user.get("role"),
+            "channel": packet.get("channel", 0),
+            "to": packet.get("to"),
+            "message": text,
+            "is_trigger": bool(TRIGGER_PREFIX) and text.startswith(TRIGGER_PREFIX),
+            # last-known position
+            "lat": pos.get("latitude"),
+            "lon": pos.get("longitude"),
+            "alt_m": pos.get("altitude"),
+            "loc_source": pos.get("locationSource"),
+            "pos_time": pos.get("time"),
+            "pos_age_s": (int(time.time() - pos["time"]) if pos.get("time") else None),
+            "ground_speed": pos.get("groundSpeed"),
+            "ground_track": pos.get("groundTrack"),
+            # RF link for this packet (useful for proximity / triangulation)
+            "rx_snr": packet.get("rxSnr"),
+            "rx_rssi": packet.get("rxRssi"),
+            "hop_limit": packet.get("hopLimit"),
+            "hop_start": packet.get("hopStart"),
+            "hops_away": node.get("hopsAway"),
+            "relay_node": packet.get("relayNode"),
+            "transport": packet.get("transportMechanism"),
+            "node_snr": node.get("snr"),
+            "last_heard": node.get("lastHeard"),
+            # power / device health (how long the node may keep transmitting)
+            "battery_pct": dm.get("batteryLevel"),
+            "voltage": dm.get("voltage"),
+            "channel_util": dm.get("channelUtilization"),
+            "air_util_tx": dm.get("airUtilTx"),
+            "uptime_s": dm.get("uptimeSeconds"),
+        }
+
+        # distance + bearing from the base station, if we know both positions
+        blat, blon, balt = _base_position(interface)
+        if blat is not None and rec["lat"] is not None and sender != _my_node_num(interface):
+            rec["dist_from_base_m"] = round(_haversine_km(blat, blon, rec["lat"], rec["lon"]) * 1000)
+            brg = _bearing_deg(blat, blon, rec["lat"], rec["lon"])
+            rec["bearing_deg"] = round(brg)
+            rec["bearing_compass"] = _compass(brg)
+            if balt is not None and rec["alt_m"] is not None:
+                rec["delta_alt_m"] = int(rec["alt_m"] - balt)
+
+        path = Path(RESCUE_LOG_PATH)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception as e:  # noqa: BLE001 — SAR logging must never break reception
+        log.debug("rescue log write failed: %s", e)
+
+
 def log_connected_node(interface) -> None:
     """Log the base station's OWN Meshtastic node (the one we connected over BLE)."""
     try:
@@ -396,6 +502,10 @@ class CopilotBot:
 
             log.info("RX text from %s ch%s to %s: %r", sender, channel, to, text)
 
+            # Record every inbound text for search-and-rescue, even ones that
+            # don't trigger the bot — any contact from a node is a SAR signal.
+            record_rescue_log(interface, packet, text)
+
             if TRIGGER_PREFIX and not text.startswith(TRIGGER_PREFIX):
                 log.info("   ignored: missing %r trigger prefix", TRIGGER_PREFIX)
                 return
@@ -415,20 +525,24 @@ class CopilotBot:
                 log.info("Q from %s ch%s: %s", sender, channel, question)
                 log.info("   sender: %s", sender_info(self.iface, sender))
                 hits: list = []
-                try:
-                    answer, hits = ask_llm(question, self.retriever)
-                except Exception as e:
-                    log.exception("LLM call failed")
-                    answer = f"co-pilot error: {e}"
-
-                if hits:
-                    log.info(
-                        "   RAG top-%d: %s",
-                        len(hits),
-                        ", ".join(f"{h.score:.2f} {h.chunk['source']}" for h in hits),
-                    )
+                help_text = help_reply(question)
+                if help_text is not None:
+                    log.info("   help command → usage reply")
+                    answer = help_text
                 else:
-                    log.info("   RAG: no hit ≥ %.2f → REFUSE", DEFAULT_MIN_SCORE)
+                    try:
+                        answer, hits = ask_llm(question, self.retriever)
+                    except Exception as e:
+                        log.exception("LLM call failed")
+                        answer = f"co-pilot error: {e}"
+                    if hits:
+                        log.info(
+                            "   RAG top-%d: %s",
+                            len(hits),
+                            ", ".join(f"{h.score:.2f} {h.chunk['source']}" for h in hits),
+                        )
+                    else:
+                        log.info("   RAG: no hit ≥ %.2f → REFUSE", DEFAULT_MIN_SCORE)
 
                 if len(answer) > MAX_REPLY_CHARS:
                     answer = answer[:MAX_REPLY_CHARS].rstrip() + "…"
