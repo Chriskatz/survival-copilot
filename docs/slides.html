@@ -23,14 +23,37 @@
     background:linear-gradient(90deg,var(--rag),var(--gold))}
 
   /* ---- slide frame ---- */
-  .deck{position:fixed;inset:0}
+  .deck{position:fixed;inset:0;perspective:1800px;perspective-origin:50% 45%}
   .slide{
     position:absolute;inset:0;display:none;
     padding:5.5vh 6vw; flex-direction:column;justify-content:center;
-    animation:fade .5s cubic-bezier(.22,.61,.36,1);
   }
   .slide.active{display:flex}
-  @keyframes fade{from{opacity:0;transform:translateY(12px) scale(.995)}to{opacity:1;transform:none}}
+  /* direction-aware 3D enter transition (set by show()) */
+  .slide.active.enter-fwd{animation:enterFwd .62s cubic-bezier(.2,.7,.2,1)}
+  .slide.active.enter-back{animation:enterBack .62s cubic-bezier(.2,.7,.2,1)}
+  @keyframes enterFwd{
+    0%{opacity:0;transform:translateX(9%) rotateY(-12deg) scale(.92);filter:blur(7px)}
+    100%{opacity:1;transform:none;filter:blur(0)}
+  }
+  @keyframes enterBack{
+    0%{opacity:0;transform:translateX(-9%) rotateY(12deg) scale(.92);filter:blur(7px)}
+    100%{opacity:1;transform:none;filter:blur(0)}
+  }
+  /* content cascades in, layer by layer */
+  .slide.active.enter-fwd > *,.slide.active.enter-back > *{
+    animation:rise .55s both cubic-bezier(.22,.61,.36,1)}
+  .slide.active > *:nth-child(1){animation-delay:.14s}
+  .slide.active > *:nth-child(2){animation-delay:.22s}
+  .slide.active > *:nth-child(3){animation-delay:.30s}
+  .slide.active > *:nth-child(4){animation-delay:.38s}
+  .slide.active > *:nth-child(5){animation-delay:.46s}
+  @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active.enter-fwd,.slide.active.enter-back{animation:fade .3s ease}
+    .slide.active > *{animation:none!important}
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
 
   .kicker{font-size:1.55vw;font-weight:700;letter-spacing:.28em;text-transform:uppercase;
     color:var(--rag);margin-bottom:2.2vh;display:flex;align-items:center;gap:.85em}
@@ -158,6 +181,7 @@
       a <strong>local AI</strong> still answers <span class="teal">life-saving</span> questions.
     </p>
     <div style="margin-top:4vh"><span class="badge" style="font-size:1.35vw">🛰️ <b>NO INTERNET</b> · <b>NO CELL</b> · <b>NO CLOUD</b> — 100% on-device</span></div>
+    <p class="cap" style="margin-top:2.6vh;font-size:1vw;color:var(--muted)">Hackathon demo — not a substitute for professional emergency services.</p>
   </section>
 
   <!-- 2 · PROBLEM -->
@@ -188,7 +212,7 @@
     </p>
     <ul class="points">
       <li class="g">Works with <strong>stock Meshtastic apps</strong> — nothing to install in the field.</li>
-      <li class="g">Replies are <strong>grounded in a verified knowledge base</strong>, not a model's guess.</li>
+      <li class="g">Replies are <strong>grounded in a curated knowledge base</strong>, not a model's guess.</li>
       <li class="g"><strong>Free for everyone.</strong> No account, no paywall, no gate.</li>
     </ul>
   </section>
@@ -206,38 +230,37 @@
   <section class="slide">
     <div class="kicker" style="color:var(--rag)">Live on real hardware</div>
     <h2>A real exchange, end to end</h2>
-    <div class="cols" style="align-items:center">
-      <div class="chat">
-        <div class="bubble from-user">?bitten by a snake — what now</div>
-        <div class="bubble from-bot">1. Stay calm, stop moving — slow the venom spread.<br>2. Pressure-immobilise the limb, keep it below the heart.<br>3. SOS — send your location + time of bite.</div>
-        <div class="cap">↳ retrieved <code>first_aid_snake_bite</code> @ 0.72 · 2 segments · 227 B · DM reply</div>
-      </div>
-      <div>
-        <ul class="points" style="margin-top:0">
-          <li>Sent from a <strong>mobile over LoRa</strong> — no SIM, no Wi-Fi.</li>
-          <li><strong>Multilingual &amp; cross-lingual:</strong> ask in any language; it retrieves sources across languages and answers in kind.</li>
-          <li>Round-trip in <strong>seconds</strong>, within the 200-byte LoRa budget.</li>
-        </ul>
-        <p class="cap" style="font-size:1.1vw;margin-top:2vh">📹 &lt;demo video plays here&gt;</p>
-      </div>
+    <div style="display:flex;gap:2.5vw;align-items:center;justify-content:center;margin-top:1vh">
+      <figure style="margin:0;display:flex;flex-direction:column;align-items:center;gap:.8vh">
+        <img src="assets/slide5-phone.jpg"
+             alt="Handheld Meshtastic view — hypothermia answered, off-topic refused, signal-for-rescue wording"
+             style="max-height:60vh;width:auto;border:1px solid var(--line);border-radius:16px">
+        <figcaption class="cap">On the handheld · Meshtastic</figcaption>
+      </figure>
+      <figure style="margin:0;display:flex;flex-direction:column;align-items:center;gap:.8vh;min-width:0">
+        <img src="assets/slide5-log.jpg"
+             alt="Base-station live log — USB serial, real node telemetry, RAG-grounded reply, off-topic refused below threshold"
+             style="max-height:58vh;max-width:54vw;width:auto;border:1px solid var(--line);border-radius:10px">
+        <figcaption class="cap">On the base station · live log</figcaption>
+      </figure>
     </div>
   </section>
 
   <!-- 6 · GROUNDED & SAFE -->
   <section class="slide">
     <div class="kicker" style="color:var(--rag)">Grounded &amp; safe</div>
-    <h2>It refuses rather than hallucinate</h2>
+    <h2>Built to refuse, not guess</h2>
     <div class="two-logo" style="flex-direction:column">
       <div class="logo-card" style="border-color:var(--rag)">
         <div class="name teal">🔎 Retrieval-grounded</div>
-        <div class="role">Every answer is built from a bilingual survival corpus, embedded with <strong>EmbeddingGemma</strong>. Cross-lingual — a Chinese query finds English sources.</div>
+        <div class="role">Answers are drawn from a curated survival corpus (embedded with <strong>EmbeddingGemma</strong>), keeping replies close to the source instead of free-form.</div>
       </div>
       <div class="logo-card" style="border-color:var(--danger)">
-        <div class="name red">🚫 Refuse on low confidence</div>
-        <div class="role">If nothing relevant scores above <code>0.40</code>, the bot says "out of scope" <strong>before</strong> the LLM ever runs — no confident wrong answers on life-critical topics.</div>
+        <div class="name red">🚫 Refuse below threshold</div>
+        <div class="role">If nothing scores above <code>0.40</code>, it refuses <strong>before</strong> the LLM runs — a guardrail so off-topic questions don't get made-up answers.</div>
       </div>
     </div>
-    <p class="lead" style="margin-top:2vh;font-size:1.7vw">Validated end-to-end: in-domain answers grounded, off-topic queries refused.</p>
+    <p class="lead" style="margin-top:2vh;font-size:1.55vw">A safety guardrail, not a guarantee — grounding lowers the chance of wrong answers, but a small on-device model can still err. Verify before acting in a real emergency.</p>
   </section>
 
   <!-- 7 · WHY EDGE AI -->
@@ -273,10 +296,10 @@
     <div class="kicker" style="color:var(--field)">Vision</div>
     <h2>A growing <span class="g">off-grid mutual-aid network</span></h2>
     <ul class="points">
-      <li class="g">Answers stay <strong>free for everyone</strong> — no account, no gate.</li>
-      <li class="g">Each base station is <strong>solar-capable and off-grid</strong> — no power line, no internet needed. <span class="gold">Unstoppable</span> by design.</li>
       <li class="g">Drop more stations <strong>anywhere the network is down</strong> → wider coverage.</li>
-      <li class="g">Every new node <strong>extends the safety net</strong> — public-good infrastructure for the places that need it most.</li>
+      <li class="g"><strong>Opportunistic uplink:</strong> give a station any outbound link — cellular, satellite, or radio — and it relays the SOS + location out to responders. Offline-first, online whenever it can.</li>
+      <li class="g">Every new node <strong>extends the safety net</strong> — the more that join, the stronger it gets.</li>
+      <li class="g"><strong>Public-good infrastructure</strong> — community-run, for the places that need it most.</li>
     </ul>
   </section>
 
@@ -316,11 +339,11 @@
     "Exactly when someone needs help most, the signal is gone. Cloud AI goes dark the moment the bars hit zero — and the information that could save a life is the information you can't reach.",
     "Our answer: send a short text question over a LoRa mesh, and a local AI replies. People use ordinary Meshtastic radios; a base station runs the AI fully on-device — grounded, and free for everyone.",
     "Here's the whole system. A survivor's node sends a query; it hops peer-to-peer across the mesh relays to the base station, where a local AI processes it and sends a grounded answer back — with zero infrastructure.",
-    "And it works on real hardware. A live exchange over LoRa from an iPhone with no SIM and no Wi-Fi: a snake-bite question, grounded against our knowledge base, answered in seconds — and it works across languages too.",
-    "Because lives are at stake, it refuses rather than hallucinate. Every answer is retrieval-grounded; if nothing relevant is found, it says out of scope before the model even runs.",
-    "This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on a laptop, no cloud bills.",
+    "And it works on real hardware. A live exchange over LoRa from a phone with no SIM and no Wi-Fi: a hypothermia question answered in seconds, grounded against our knowledge base — and an off-topic question refused, not guessed.",
+    "Because lives are at stake, it refuses rather than guess. Every answer is retrieval-grounded; if nothing relevant is found, it says out of scope before the model even runs.",
+    "This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.",
     "It's built on the QVAC SDK — decentralized, local AI in a single API. Every bit of inference, the LLM and the RAG embeddings, runs through QVAC, on-device, across platforms. The transport is open-source Meshtastic over LoRa.",
-    "And it grows. Each base station is cheap and solar-capable — drop one anywhere the network is down, and every new node extends the safety net. Public-good infrastructure for the places that need it most.",
+    "And it grows. Drop a base station anywhere the network is down — every new node extends the safety net. Give one any outbound link — cellular, satellite, or radio — and it relays the SOS and location out to responders: offline-first, online whenever it can. Public-good infrastructure for the places that need it most.",
     "Survival Co-pilot: life-critical AI that works anywhere. Private. Local. Unstoppable. Open-source, and powered entirely by QVAC."
   ];
 
@@ -328,8 +351,17 @@
   const synth=window.speechSynthesis;
 
   function show(n){
+    const prev=i;
     i=Math.max(0,Math.min(slides.length-1,n));
-    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    const dir = i<prev ? 'enter-back' : 'enter-fwd';
+    slides.forEach((s,k)=>{
+      s.classList.toggle('active',k===i);
+      if(k!==i) s.classList.remove('enter-fwd','enter-back');
+    });
+    const cur=slides[i];
+    cur.classList.remove('enter-fwd','enter-back');
+    void cur.offsetWidth;                 // reflow so the animation restarts
+    cur.classList.add(dir);
     document.getElementById('pageno').textContent=String(i+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
     document.getElementById('bar').style.width=((i+1)/slides.length*100)+'%';
     location.hash=i+1;

@@ -37,23 +37,23 @@ otherwise any TTS or record your own voice). English (EN) + Traditional Chinese 
 ---
 
 ## 5 · Live demo
-**EN —** And it works on real hardware. A live exchange over LoRa from an iPhone with no SIM and no Wi-Fi: a snake-bite question, grounded against our knowledge base, answered in seconds — and it works across languages too.
+**EN —** And it works on real hardware. A live exchange over LoRa from a phone with no SIM and no Wi-Fi: a hypothermia question answered in seconds, grounded against our knowledge base — and an off-topic question refused, not guessed.
 
-**ZH —** 而且它在真機上跑得起來。這是用一支沒有 SIM、沒有 Wi-Fi 的 iPhone，透過 LoRa 的實際對話：一個蛇咬問題，依知識庫佐證、幾秒內回覆 —— 而且還能跨語言。
+**ZH —** 而且它在真機上跑得起來。這是用一支沒有 SIM、沒有 Wi-Fi 的手機，透過 LoRa 的實際對話：一個失溫問題，幾秒內依知識庫佐證回覆 —— 而離題的問題則被拒答，不亂猜。
 
 ---
 
 ## 6 · Grounded & safe
-**EN —** Because lives are at stake, it refuses rather than hallucinate. Every answer is retrieval-grounded; if nothing relevant is found, it says "out of scope" before the model even runs.
+**EN —** Because lives are at stake, it refuses rather than guess. Every answer is retrieval-grounded; if nothing relevant is found, it says "out of scope" before the model even runs.
 
 **ZH —** 因為攸關性命，它寧可拒答也不亂編。每個答案都有檢索佐證；若找不到相關內容，它會在模型執行前就回「超出範圍」。
 
 ---
 
 ## 7 · Why edge AI
-**EN —** This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on a laptop, no cloud bills.
+**EN —** This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.
 
-**ZH —** 這就是為什麼 edge AI 能贏在雲端到不了的地方：隱私 —— 資料不離開裝置；韌性 —— 沒有單點故障；速度 —— 幾秒回覆；低成本 —— 跑在筆電上，沒有雲端帳單。
+**ZH —** 這就是為什麼 edge AI 能贏在雲端到不了的地方：隱私 —— 資料不離開裝置；韌性 —— 沒有單點故障；速度 —— 幾秒回覆；低成本 —— 跑在一般硬體上，從筆電到 Raspberry Pi，沒有雲端帳單。
 
 ---
 
@@ -65,9 +65,9 @@ otherwise any TTS or record your own voice). English (EN) + Traditional Chinese 
 ---
 
 ## 9 · Vision
-**EN —** And it grows. Each base station is cheap and solar-capable — drop one anywhere the network is down, and every new node extends the safety net. Public-good infrastructure for the places that need it most.
+**EN —** And it grows. Drop a base station anywhere the network is down — every new node extends the safety net. Give one any outbound link — cellular, satellite, or radio — and it relays the SOS and location out to responders: offline-first, online whenever it can. Public-good infrastructure for the places that need it most.
 
-**ZH —** 而且它會成長。每個基地台都便宜、可太陽能供電 —— 哪裡斷網就佈一台，每多一個節點就擴大一分安全網。這是給最需要的地方的公共財基礎建設。
+**ZH —** 而且它會成長。哪裡斷網就佈一台基地台，每多一個節點就擴大一分安全網。只要基地台有任一條對外連線 —— 行動網路、衛星、或無線電 —— 就把求救與位置轉送出去給外界:離線優先,有路就上線。這是給最需要的地方的公共財基礎建設。
 
 ---
 
