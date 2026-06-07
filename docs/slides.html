@@ -137,8 +137,7 @@
   .qstrip{display:grid;grid-template-columns:repeat(2,1fr);gap:1.8vw 2vw;width:100%;margin-top:1.2vh}
   .qitem{border:1px solid var(--line);border-radius:16px;padding:2.6vh 1.8vw;
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.014));
-    box-shadow:0 12px 30px rgba(0,0,0,.38);display:flex;flex-direction:column;gap:1vh;
-    aspect-ratio:3/2}
+    box-shadow:0 12px 30px rgba(0,0,0,.38);display:flex;flex-direction:column;gap:1vh}
   .qitem .qbadge{width:3.2vw;height:3.2vw;min-width:46px;min-height:46px;border-radius:12px;
     display:flex;align-items:center;justify-content:center;font-weight:900;font-size:2vw;color:#03060b}
   .qitem .qttl{font-size:2.6vw;font-weight:800;letter-spacing:.02em;line-height:1.1}
@@ -154,10 +153,9 @@
   <section class="slide active" style="justify-content:center">
     <div class="kicker">🛰️ QVAC Hackathon I · Unleash Edge AI</div>
     <h1>Survival<br><span class="accent">Co-pilot</span></h1>
-    <p class="lead" style="margin-top:3vh;font-size:2.1vw">
+    <p class="lead" style="margin-top:3vh;font-size:2.1vw;max-width:24em;line-height:1.5;text-wrap:balance">
       When disaster strikes — or you're somewhere with <strong>no signal at all</strong> —
-      a <strong>local AI</strong> still answers life-saving questions over a
-      <strong>LoRa mesh</strong>. No internet, no cell, no cloud.
+      a <strong>local AI</strong> still answers <span class="teal">life-saving</span> questions.
     </p>
     <div style="margin-top:4vh"><span class="badge" style="font-size:1.35vw">🛰️ <b>NO INTERNET</b> · <b>NO CELL</b> · <b>NO CLOUD</b> — 100% on-device</span></div>
   </section>
@@ -166,9 +164,14 @@
   <section class="slide">
     <div class="kicker" style="color:var(--danger)">The problem</div>
     <h2>When you need help most,<br>there's <span class="red">no signal</span>.</h2>
+    <p class="big" style="font-size:2.2vw;max-width:32em">
+      A war, a quake, a typhoon, or simply being <strong>far beyond the last tower</strong> —
+      the emergency and the blackout arrive together. And the right answer in that moment
+      can be the difference between a scare and a tragedy.
+    </p>
     <ul class="points">
-      <li>When disaster strikes — or you're beyond all coverage — <strong>the first thing to fail is the network.</strong></li>
-      <li>Cloud AI is useless off-grid. The moment the bars hit zero, every assistant goes dark.</li>
+      <li>Help matters most in the <strong>first minutes</strong> — exactly when you're cut off.</li>
+      <li>Off-grid, <strong>cloud AI is dead weight</strong> — the moment the bars hit zero, every assistant goes dark.</li>
       <li class="red">The information that could save a life is exactly the information you can't reach.</li>
     </ul>
   </section>
@@ -177,9 +180,10 @@
   <section class="slide">
     <div class="kicker" style="color:var(--field)">The solution</div>
     <h2>Text a question over the mesh.<br>A <span class="g">local AI</span> answers.</h2>
-    <p class="big">
-      People on the ground carry handheld <strong>Meshtastic</strong> radios. A base station — a laptop
-      (soon a <span class="gold">solar box</span>) — runs a <strong>fully on-device LLM</strong>
+    <p class="big" style="font-size:2.2vw">
+      People on the ground carry handheld <strong>LoRa (Long Range)</strong> radios. A base station — <strong>any
+      device that runs the QVAC SDK</strong>, from a laptop or mini-PC to a
+      <span class="gold">solar-powered single-board computer</span> — runs a <strong>fully on-device LLM</strong>
       and auto-answers over <strong>LoRa</strong>.
     </p>
     <ul class="points">
@@ -210,7 +214,7 @@
       </div>
       <div>
         <ul class="points" style="margin-top:0">
-          <li>Sent from an <strong>iPhone over LoRa</strong> — no SIM, no Wi-Fi.</li>
+          <li>Sent from a <strong>mobile over LoRa</strong> — no SIM, no Wi-Fi.</li>
           <li><strong>Multilingual &amp; cross-lingual:</strong> ask in any language; it retrieves sources across languages and answers in kind.</li>
           <li>Round-trip in <strong>seconds</strong>, within the 200-byte LoRa budget.</li>
         </ul>
@@ -242,9 +246,9 @@
     <h2>It wins where the cloud can't follow</h2>
     <div class="qstrip">
       <div class="qitem" style="border-color:var(--base)"><div class="qhead"><div class="qbadge" style="background:var(--base)">🔒</div><div class="qttl">Private<span>data never leaves the device</span></div></div><div class="qtxt">Every query &amp; answer stays local — no cloud ever sees it. Your data stays yours.</div></div>
-      <div class="qitem" style="border-color:var(--field)"><div class="qhead"><div class="qbadge" style="background:var(--field)">🛡️</div><div class="qttl">Resilient<span>no central point of failure</span></div></div><div class="qtxt">Keeps working when towers, grid and internet are gone — the mesh has nothing to knock out.</div></div>
+      <div class="qitem" style="border-color:var(--field)"><div class="qhead"><div class="qbadge" style="background:var(--field)">🛡️</div><div class="qttl">Resilient<span>no fragile infrastructure</span></div></div><div class="qtxt">Keeps working when towers, grid and internet are gone — and every extra base station adds another layer of redundancy.</div></div>
       <div class="qitem" style="border-color:var(--gold)"><div class="qhead"><div class="qbadge" style="background:var(--gold)">⚡</div><div class="qttl">Fast<span>local inference</span></div></div><div class="qtxt">Answers in seconds on-device — no round-trip to a datacentre you can't even reach.</div></div>
-      <div class="qitem" style="border-color:var(--llm)"><div class="qhead"><div class="qbadge" style="background:var(--llm)">💸</div><div class="qttl">Low-cost<span>runs on a laptop</span></div></div><div class="qtxt">No cloud bills, no per-call fees — a laptop today, a solar Pi tomorrow.</div></div>
+      <div class="qitem" style="border-color:var(--llm)"><div class="qhead"><div class="qbadge" style="background:var(--llm)">💸</div><div class="qttl">Low-cost<span>runs on commodity hardware</span></div></div><div class="qtxt">No cloud bills, no per-call fees — runs on anything from a laptop to a solar-powered Raspberry Pi.</div></div>
     </div>
   </section>
 
@@ -270,7 +274,7 @@
     <h2>A growing <span class="g">off-grid mutual-aid network</span></h2>
     <ul class="points">
       <li class="g">Answers stay <strong>free for everyone</strong> — no account, no gate.</li>
-      <li class="g">Each base station is <strong>cheap and solar-capable</strong> — no grid, no internet needed.</li>
+      <li class="g">Each base station is <strong>solar-capable and off-grid</strong> — no power line, no internet needed. <span class="gold">Unstoppable</span> by design.</li>
       <li class="g">Drop more stations <strong>anywhere the network is down</strong> → wider coverage.</li>
       <li class="g">Every new node <strong>extends the safety net</strong> — public-good infrastructure for the places that need it most.</li>
     </ul>
