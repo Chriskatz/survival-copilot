@@ -630,15 +630,27 @@ def pick_ble_address(preset: str | None) -> str | None:
 def connect_interface():
     """Open the mesh link.
 
-    Prefer USB serial when MESH_SERIAL_PORT is set (``auto`` = let meshtastic
-    auto-detect the port). Serial avoids the macOS BLE notification-drop that
-    silently stalls inbound packets — the node keeps hearing LoRa but the Mac
-    stops getting "new packet" notifications. Falls back to BLE when unset.
+    Prefer USB serial when MESH_SERIAL_PORT is set. Serial avoids the macOS BLE
+    notification-drop that silently stalls inbound packets. With ``auto`` we only
+    use serial if a real USB Meshtastic port is present — otherwise fall back to
+    BLE. (A bare SerialInterface with no device silently connects to TCP
+    localhost instead, which is never what we want here.)
     """
     if SERIAL_PORT:
-        dev = None if SERIAL_PORT.lower() == "auto" else SERIAL_PORT
-        log.info("Connecting USB serial… port=%s", dev or "auto-detect")
-        return SerialInterface(devPath=dev)
+        if SERIAL_PORT.lower() == "auto":
+            try:
+                from meshtastic.util import findPorts
+                ports = findPorts(True)
+            except Exception as e:  # noqa: BLE001
+                log.warning("serial port scan failed (%s); falling back to BLE", e)
+                ports = []
+            if ports:
+                log.info("Connecting USB serial… port=%s", ports[0])
+                return SerialInterface(devPath=ports[0])
+            log.info("No USB serial device found → falling back to BLE.")
+        else:
+            log.info("Connecting USB serial… port=%s", SERIAL_PORT)
+            return SerialInterface(devPath=SERIAL_PORT)
     address = pick_ble_address(BLE_ADDRESS)
     log.info("Connecting BLE… address=%r", address)
     return BLEInterface(address=address)
