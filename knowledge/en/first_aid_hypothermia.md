@@ -26,8 +26,8 @@ If the patient is **conscious and able to swallow**, give warm sweetened drinks 
 
 Do not **apply direct heat or open fire to extremities** — peripheral vasodilation sends cold blood back to the heart, potentially causing fatal arrhythmia. Do not **vigorously rub or massage limbs** — same reason. Do not **let the patient sleep alone**; maintain conversation to keep them alert.
 
-## When to SOS
+## When to signal for rescue
 
-Call SOS the moment the patient shows **moderate hypothermia signs** (shivering stops, slurred speech, drowsy). In wilderness, moderate hypothermia can progress to severe within 1-2 hours and requires medical equipment to reverse. While waiting, **two rescuers performing skin-to-skin warming** of the patient's torso is an effective emergency measure.
+Signal for rescue the moment the patient shows **moderate hypothermia signs** (shivering stops, slurred speech, drowsy). In wilderness, moderate hypothermia can progress to severe within 1-2 hours and requires medical equipment to reverse. While waiting, **two rescuers performing skin-to-skin warming** of the patient's torso is an effective emergency measure.
 
 > Source: Red Cross International first-aid materials, Wilderness Medical Society Practice Guidelines (2019). Hackathon seed sample.

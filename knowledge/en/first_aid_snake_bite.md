@@ -24,7 +24,7 @@ If safe, photograph the snake (do NOT risk a second bite). Otherwise note **colo
 
 ## Evacuation and reporting
 
-After pressure immobilisation, **call SOS immediately** with location, bite time, and snake description. While waiting, keep the patient warm, calm, and monitor breathing and consciousness. If breathing fails, begin CPR.
+After pressure immobilisation, **signal for rescue immediately** with location, bite time, and snake description. While waiting, keep the patient warm, calm, and monitor breathing and consciousness. If breathing fails, begin CPR.
 
 ## Antivenom
 
