@@ -147,6 +147,12 @@ remote-apis.yaml      remote-API disclosure (declares: none at runtime)
 - **No cloud calls anywhere** — all inference is local via `@qvac/sdk`; if a dependency needs the network, it doesn't ship.
 - **BLE is single-owner** on macOS — the bot and the Meshtastic GUI can't both hold the radio.
 
+## Roadmap
+
+- **Opportunistic outbound uplink (store-and-forward gateway).** The base station is offline-first, but given *any* outbound link — cellular, satellite, ham/radio, or internet — it would relay an incoming SOS (with the sender's GPS + telemetry from the SAR log) out to responders. Satellite/cellular become *optional* bridges, never requirements; the system always degrades gracefully to fully offline. (This is also why "just use Starlink" misses the point: a single foreign uplink you can be denied is one of our optional bridges, not the foundation.)
+- **Solar-powered SBC base station** — move from a laptop to a low-power, solar-capable single-board computer for permanent off-grid deployment.
+- **Reliable delivery for long replies** — channel broadcasts have no retransmit, so a long multi-segment answer can drop a segment. Add chunk-level ACK/retry (or reliable unicast) for completeness.
+
 ## License
 
 [MIT](./LICENSE) — fully open-source, yours to run, modify, and ship with no vendor lock-in.
