@@ -314,6 +314,10 @@
   if(synth) synth.onvoiceschanged=()=>{};   // some browsers load voices async
   const start=parseInt(location.hash.replace('#',''));
   show(Number.isFinite(start)&&start>0?start-1:0);
+  // Hide UI chrome when rendering for video (?mode=video)
+  if(new URLSearchParams(location.search).get('mode')==='video'){
+    ['#playbtn','.hint','#pageno','.brand','.barwrap'].forEach(s=>document.querySelector(s)?.style.setProperty('display','none'));
+  }
 </script>
 </body>
 </html>
