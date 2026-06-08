@@ -51,9 +51,9 @@ otherwise any TTS or record your own voice). English (EN) + Traditional Chinese 
 ---
 
 ## 7 · Why edge AI
-**EN —** This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.
+**EN —** This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; available — a local answer when the cloud is out of reach, depending on nothing external; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.
 
-**ZH —** 這就是為什麼 edge AI 能贏在雲端到不了的地方：隱私 —— 資料不離開裝置；韌性 —— 沒有單點故障；速度 —— 幾秒回覆；低成本 —— 跑在一般硬體上，從筆電到 Raspberry Pi，沒有雲端帳單。
+**ZH —** 這就是為什麼 edge AI 能贏在雲端到不了的地方：隱私 —— 資料不離開裝置；韌性 —— 沒有單點故障；可用性 —— 雲端連不到時,本機仍給得出答案,不依賴任何外部服務；低成本 —— 跑在一般硬體上,從筆電到 Raspberry Pi,沒有雲端帳單。
 
 ---
 

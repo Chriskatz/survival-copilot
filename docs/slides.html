@@ -23,37 +23,16 @@
     background:linear-gradient(90deg,var(--rag),var(--gold))}
 
   /* ---- slide frame ---- */
-  .deck{position:fixed;inset:0;perspective:1800px;perspective-origin:50% 45%}
+  .deck{position:fixed;inset:0}
   .slide{
     position:absolute;inset:0;display:none;
     padding:5.5vh 6vw; flex-direction:column;justify-content:center;
   }
   .slide.active{display:flex}
-  /* direction-aware 3D enter transition (set by show()) */
-  .slide.active.enter-fwd{animation:enterFwd .62s cubic-bezier(.2,.7,.2,1)}
-  .slide.active.enter-back{animation:enterBack .62s cubic-bezier(.2,.7,.2,1)}
-  @keyframes enterFwd{
-    0%{opacity:0;transform:translateX(9%) rotateY(-12deg) scale(.92);filter:blur(7px)}
-    100%{opacity:1;transform:none;filter:blur(0)}
-  }
-  @keyframes enterBack{
-    0%{opacity:0;transform:translateX(-9%) rotateY(12deg) scale(.92);filter:blur(7px)}
-    100%{opacity:1;transform:none;filter:blur(0)}
-  }
-  /* content cascades in, layer by layer */
-  .slide.active.enter-fwd > *,.slide.active.enter-back > *{
-    animation:rise .55s both cubic-bezier(.22,.61,.36,1)}
-  .slide.active > *:nth-child(1){animation-delay:.14s}
-  .slide.active > *:nth-child(2){animation-delay:.22s}
-  .slide.active > *:nth-child(3){animation-delay:.30s}
-  .slide.active > *:nth-child(4){animation-delay:.38s}
-  .slide.active > *:nth-child(5){animation-delay:.46s}
-  @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){
-    .slide.active.enter-fwd,.slide.active.enter-back{animation:fade .3s ease}
-    .slide.active > *{animation:none!important}
-  }
-  @keyframes fade{from{opacity:0}to{opacity:1}}
+  /* gentle cross-fade — the safest, most widely comfortable transition */
+  .slide.active.fx-in{animation:fxFade .5s both cubic-bezier(.2,.7,.2,1)}
+  @keyframes fxFade{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide.active.fx-in{animation-duration:.3s}}
 
   .kicker{font-size:1.55vw;font-weight:700;letter-spacing:.28em;text-transform:uppercase;
     color:var(--rag);margin-bottom:2.2vh;display:flex;align-items:center;gap:.85em}
@@ -270,7 +249,7 @@
     <div class="qstrip">
       <div class="qitem" style="border-color:var(--base)"><div class="qhead"><div class="qbadge" style="background:var(--base)">🔒</div><div class="qttl">Private<span>data never leaves the device</span></div></div><div class="qtxt">Every query &amp; answer stays local — no cloud ever sees it. Your data stays yours.</div></div>
       <div class="qitem" style="border-color:var(--field)"><div class="qhead"><div class="qbadge" style="background:var(--field)">🛡️</div><div class="qttl">Resilient<span>no fragile infrastructure</span></div></div><div class="qtxt">Keeps working when towers, grid and internet are gone — and every extra base station adds another layer of redundancy.</div></div>
-      <div class="qitem" style="border-color:var(--gold)"><div class="qhead"><div class="qbadge" style="background:var(--gold)">⚡</div><div class="qttl">Fast<span>local inference</span></div></div><div class="qtxt">Answers in seconds on-device — no round-trip to a datacentre you can't even reach.</div></div>
+      <div class="qitem" style="border-color:var(--gold)"><div class="qhead"><div class="qbadge" style="background:var(--gold)">✅</div><div class="qttl">Available<span>no signal, no dependency</span></div></div><div class="qtxt">When the cloud is out of reach, a local answer is the only one you get — depending on no tower, provider, or link.</div></div>
       <div class="qitem" style="border-color:var(--llm)"><div class="qhead"><div class="qbadge" style="background:var(--llm)">💸</div><div class="qttl">Low-cost<span>runs on commodity hardware</span></div></div><div class="qtxt">No cloud bills, no per-call fees — runs on anything from a laptop to a solar-powered Raspberry Pi.</div></div>
     </div>
   </section>
@@ -341,7 +320,7 @@
     "Here's the whole system. A survivor's node sends a query; it hops peer-to-peer across the mesh relays to the base station, where a local AI processes it and sends a grounded answer back — with zero infrastructure.",
     "And it works on real hardware. A live exchange over LoRa from a phone with no SIM and no Wi-Fi: a hypothermia question answered in seconds, grounded against our knowledge base — and an off-topic question refused, not guessed.",
     "Because lives are at stake, it refuses rather than guess. Every answer is retrieval-grounded; if nothing relevant is found, it says out of scope before the model even runs.",
-    "This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; fast — answers in seconds; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.",
+    "This is why edge AI wins where the cloud can't follow: private — your data never leaves the device; resilient — no central point to fail; available — a local answer when the cloud is out of reach, depending on nothing external; low-cost — it runs on commodity hardware, from a laptop to a Raspberry Pi, with no cloud bills.",
     "It's built on the QVAC SDK — decentralized, local AI in a single API. Every bit of inference, the LLM and the RAG embeddings, runs through QVAC, on-device, across platforms. The transport is open-source Meshtastic over LoRa.",
     "And it grows. Drop a base station anywhere the network is down — every new node extends the safety net. Give one any outbound link — cellular, satellite, or radio — and it relays the SOS and location out to responders: offline-first, online whenever it can. Public-good infrastructure for the places that need it most.",
     "Survival Co-pilot: life-critical AI that works anywhere. Private. Local. Unstoppable. Open-source, and powered entirely by QVAC."
@@ -351,17 +330,12 @@
   const synth=window.speechSynthesis;
 
   function show(n){
-    const prev=i;
     i=Math.max(0,Math.min(slides.length-1,n));
-    const dir = i<prev ? 'enter-back' : 'enter-fwd';
-    slides.forEach((s,k)=>{
-      s.classList.toggle('active',k===i);
-      if(k!==i) s.classList.remove('enter-fwd','enter-back');
-    });
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
     const cur=slides[i];
-    cur.classList.remove('enter-fwd','enter-back');
-    void cur.offsetWidth;                 // reflow so the animation restarts
-    cur.classList.add(dir);
+    cur.classList.remove('fx-in');
+    void cur.offsetWidth;                 // reflow so the fade restarts
+    cur.classList.add('fx-in');
     document.getElementById('pageno').textContent=String(i+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
     document.getElementById('bar').style.width=((i+1)/slides.length*100)+'%';
     location.hash=i+1;
