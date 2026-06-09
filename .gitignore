@@ -18,7 +18,5 @@ __pycache__/
 # tools/audit_run.mjs and bot/injection_test.py (machine-specific, not source).
 evidence/
 
-# Generated video and intermediate screenshot PNGs — regenerate via tools/
-docs/*.mp4
-docs/*.zip
-docs/assets/slides_png/
+# Presentation materials — slides, audio, architecture diagrams (not core source)
+docs/
