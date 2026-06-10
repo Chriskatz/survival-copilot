@@ -37,7 +37,7 @@ console.log("Loading QVAC supertonic TTS (downloads on first run)…");
 const modelId = await loadModel({
   modelSrc: TTS_EN_SUPERTONIC_Q8_0.src,
   modelType: "tts",
-  modelConfig: { ttsEngine: "supertonic", language: "en", voice: "F1", ttsSpeed: 1.0, ttsNumInferenceSteps: 5 },
+  modelConfig: { ttsEngine: "supertonic", language: "en", voice: "F2", ttsSpeed: 1.0, ttsNumInferenceSteps: 5 },
   onProgress: () => process.stdout.write("."),
 });
 console.log(`\nModel loaded: ${modelId}`);

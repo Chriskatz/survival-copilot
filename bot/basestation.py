@@ -32,8 +32,10 @@ from dotenv import load_dotenv
 from pubsub import pub
 
 from chunker import chunk_for_mesh
+from incident import assess_risk, build_node_info, write_ir
 from reply import clean_reply
 from retriever import DEFAULT_MIN_SCORE, DEFAULT_TOP_K, Retriever
+from sdr_broadcast import broadcast_ir
 
 try:
     from meshtastic.ble_interface import BLEInterface
@@ -95,6 +97,12 @@ MAX_REPLY_CHARS = int(os.getenv("MAX_REPLY_CHARS", "600"))
 # Search-and-rescue log: one JSON line per inbound text message with the
 # sender's full last-known telemetry (GPS, power, RF link). Set to "" to disable.
 RESCUE_LOG_PATH = os.getenv("RESCUE_LOG_PATH") or str(HERE.parent / "evidence" / "rescue_log.jsonl")
+
+# Phase II — SDR broadcast
+SDR_BROADCAST_ENABLED = os.getenv("SDR_BROADCAST_ENABLED", "false").lower() in ("1", "true", "yes")
+SDR_FREQUENCY_HZ      = int(os.getenv("SDR_FREQUENCY_HZ", "469660000"))
+SDR_TX_GAIN           = int(os.getenv("SDR_TX_GAIN", "20"))
+SDR_TX_AMP            = int(os.getenv("SDR_TX_AMP", "0"))
 
 
 def _env_float(name: str):
@@ -513,14 +521,14 @@ class CopilotBot:
             if not question:
                 return
 
-            self._jobs.put((question, sender, channel))
+            self._jobs.put((question, sender, channel, packet))
         except Exception:
             log.exception("on_receive crashed")
 
     def _worker(self) -> None:
         """Consume queued questions one at a time, off the mesh reader thread."""
         while True:
-            question, sender, channel = self._jobs.get()
+            question, sender, channel, packet = self._jobs.get()
             try:
                 log.info("Q from %s ch%s: %s", sender, channel, question)
                 log.info("   sender: %s", sender_info(self.iface, sender))
@@ -547,7 +555,28 @@ class CopilotBot:
                 if len(answer) > MAX_REPLY_CHARS:
                     answer = answer[:MAX_REPLY_CHARS].rstrip() + "…"
 
+                # Send reply first — triage runs after so it never delays the user.
                 self.send_reply(answer, dest=sender, channel=channel)
+
+                # Phase II: risk triage + IR generation
+                try:
+                    node_info = build_node_info(self.iface, packet)
+                    risk = assess_risk(question, answer, QVAC_BASE_URL, QVAC_MODEL)
+                    log.info("   triage: %s — %s", risk["risk"], risk.get("summary", ""))
+                    ir_path = write_ir(question, answer, risk, node_info)
+                    if ir_path:
+                        log.info("   IR saved → %s", ir_path)
+                        # Phase II SDR: broadcast HIGH/CRITICAL over radio
+                        if SDR_BROADCAST_ENABLED and risk.get("risk") in ("HIGH", "CRITICAL"):
+                            log.info("   SDR: launching broadcast thread (%.3f MHz)", SDR_FREQUENCY_HZ / 1e6)
+                            threading.Thread(
+                                target=broadcast_ir,
+                                args=(risk, node_info, SDR_FREQUENCY_HZ, SDR_TX_GAIN, SDR_TX_AMP),
+                                daemon=True,
+                                name="sdr-broadcast",
+                            ).start()
+                except Exception:
+                    log.exception("triage/IR failed (non-fatal)")
             except Exception:
                 log.exception("worker failed")
             finally:

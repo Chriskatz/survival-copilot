@@ -18,5 +18,8 @@ __pycache__/
 # tools/audit_run.mjs and bot/injection_test.py (machine-specific, not source).
 evidence/
 
+# Phase II incident reports — generated at runtime, contain GPS + PII.
+incidents/
+
 # Presentation materials — slides, audio, architecture diagrams (not core source)
 docs/
