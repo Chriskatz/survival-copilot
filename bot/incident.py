@@ -46,7 +46,7 @@ Risk level guide — assign the HIGHEST level that fits any single factor:
              stable situation but seeking urgent guidance
   LOW      — general information, no current distress, theoretical question
 
-All text fields in the JSON (summary, rationale, recommended_actions) MUST be in Traditional Chinese (繁體中文) if the sender message is in Chinese, or in English if the sender message is in English.
+All text fields in the JSON (summary, rationale, recommended_actions) MUST be in English regardless of the sender's language.
 
 /no_think"""
 
@@ -70,7 +70,7 @@ def assess_risk(
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.1,
-        "max_tokens": 250,
+        "max_tokens": 400,
     }
     try:
         with httpx.Client(timeout=60.0) as client:

@@ -55,52 +55,37 @@ def check_dependencies() -> list[str]:
 # ── script composition ────────────────────────────────────────────────────────
 
 def compose_broadcast_script(risk_data: dict[str, Any], node_info: dict[str, Any]) -> str:
-    """Build an English radio-style emergency broadcast script from IR data.
+    """Build a concise English radio-style emergency broadcast script from IR data.
 
     Always English so the TTS (supertonic, EN model) renders clearly.
-    Repeated twice — standard radio protocol for short transmissions.
+    Kept short (under 200 chars) — the supertonic model has an input length limit.
     """
     risk    = risk_data.get("risk", "UNKNOWN")
-    summary = risk_data.get("summary", "")
-    actions = risk_data.get("recommended_actions") or []
+    summary = risk_data.get("summary", "") or ""
 
-    node_id  = node_info.get("long_name") or node_info.get("from_id") or "unknown node"
-    lat      = node_info.get("lat")
-    lon      = node_info.get("lon")
-    alt      = node_info.get("alt_m")
-    batt     = node_info.get("battery_pct")
-    dist_m   = node_info.get("dist_from_base_m")
-    bearing  = node_info.get("bearing_compass")
+    node_id = node_info.get("long_name") or node_info.get("from_id") or "unknown node"
+    lat     = node_info.get("lat")
+    lon     = node_info.get("lon")
+    dist_m  = node_info.get("dist_from_base_m")
+    bearing = node_info.get("bearing_compass")
 
-    parts: list[str] = [
-        f"EMERGENCY ALERT. Risk level {risk}.",
-        f"Node {node_id}.",
-    ]
+    parts: list[str] = [f"EMERGENCY. Risk {risk}. Node {node_id}."]
 
     if lat is not None and lon is not None:
-        # Read digit-by-digit to avoid misinterpretation of decimal numbers
-        lat_str = f"{lat:.4f}".replace("-", "minus ").replace(".", " point ")
-        lon_str = f"{lon:.4f}".replace("-", "minus ").replace(".", " point ")
-        parts.append(f"GPS: {lat_str} North, {lon_str} East.")
-    if alt is not None:
-        parts.append(f"Altitude {alt} meters.")
-    if batt is not None:
-        parts.append(f"Battery {batt} percent.")
-    if dist_m is not None and bearing:
-        parts.append(f"Distance from base: {dist_m} meters, bearing {bearing}.")
+        lat_str = f"{lat:.3f}".replace("-", "minus ").replace(".", " point ")
+        lon_str = f"{lon:.3f}".replace("-", "minus ").replace(".", " point ")
+        parts.append(f"GPS {lat_str} North, {lon_str} East.")
+    elif dist_m is not None and bearing:
+        parts.append(f"{dist_m} meters, bearing {bearing}.")
 
-    # Summary may be Chinese — TTS will approximate; key metadata above is English
+    # Truncate summary to keep total script short
     if summary:
-        parts.append(f"Situation: {summary}.")
+        short = summary[:80].rstrip()
+        parts.append(short + ("…" if len(summary) > 80 else "."))
 
-    if actions:
-        parts.append("Recommended actions: " + " Next: ".join(actions) + ".")
+    parts.append("Request immediate rescue. Over.")
 
-    parts.append("End of transmission.")
-
-    body = " ... ".join(parts)
-    # Repeat once with a short pause
-    return body + " ... " + body + " ... Over."
+    return " ".join(parts)
 
 
 # ── TTS (QVAC via Node) ───────────────────────────────────────────────────────
@@ -210,12 +195,23 @@ def fm_transmit(
         "-x", str(tx_gain),
         "-a", str(tx_amp),
     ]
-    log.info("sdr: %s  (%.1f s, %d bytes IQ)", " ".join(cmd), duration_s, len(iq_bytes))
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    proc.communicate(input=iq_bytes)
+    log.info(
+        "sdr: TX start → %.3f MHz  |  %.1f s audio  |  gain %d dB  |  amp %s",
+        frequency_hz / 1e6, duration_s, tx_gain, "on" if tx_amp else "off",
+    )
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stderr = proc.communicate(input=iq_bytes)
     if proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, cmd)
-    log.info("sdr: transmission complete on %.3f MHz", frequency_hz / 1e6)
+
+    # Extract "Total time" from hackrf_transfer stderr for a clean summary line
+    total_line = next(
+        (l for l in stderr.decode(errors="replace").splitlines() if "Total time" in l),
+        None,
+    )
+    log.info("sdr: TX done  → %.3f MHz  |  %s", frequency_hz / 1e6,
+             total_line.strip() if total_line else "complete")
 
 
 # ── public entry point ────────────────────────────────────────────────────────

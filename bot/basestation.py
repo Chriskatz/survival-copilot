@@ -47,11 +47,79 @@ except ImportError as e:
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
 
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO").upper(),
-    format="%(asctime)s %(levelname)s %(message)s",
-    datefmt="%H:%M:%S",
-)
+class _ColorFormatter(logging.Formatter):
+    _R    = "\033[0m"
+    _BOLD = "\033[1m"
+    _DIM  = "\033[2m"
+    # palette — no pink/magenta
+    _WHITE  = "\033[97m"
+    _CYAN   = "\033[96m"
+    _GREEN  = "\033[92m"
+    _GOLD   = "\033[38;5;220m"   # amber/gold
+    _ORANGE = "\033[38;5;208m"   # orange
+    _RED    = "\033[91m"
+    _BLUE   = "\033[38;5;33m"    # bright blue  (SDR)
+    _TEAL   = "\033[38;5;45m"    # deep sky blue (SDR done)
+    _GRAY   = "\033[90m"
+
+    def _colorize(self, msg: str, text: str) -> str:
+        if "ERROR" in msg or "failed" in text.lower():
+            return self._RED + msg + self._R
+        if "WARNING" in msg:
+            return self._GOLD + msg + self._R
+        # ── incoming message ──────────────────────────────
+        if text.startswith("RX text from"):
+            return self._BOLD + self._WHITE + msg + self._R
+        if text.startswith("Q from"):
+            return self._BOLD + self._GOLD + msg + self._R
+        # ── RAG / lang ───────────────────────────────────
+        if "RAG top-" in text:
+            return self._CYAN + msg + self._R
+        if "RAG:" in text or "lang routing" in text:
+            return self._GRAY + msg + self._R
+        # ── reply sent ───────────────────────────────────
+        if "segment(s)" in text or "answer preview" in text:
+            return self._GREEN + msg + self._R
+        # ── triage ───────────────────────────────────────
+        if "triage:" in text:
+            if "CRITICAL" in text:
+                return self._BOLD + self._RED + msg + self._R
+            if "HIGH" in text:
+                return self._BOLD + self._ORANGE + msg + self._R
+            if "MEDIUM" in text:
+                return self._GOLD + msg + self._R
+            return self._GREEN + msg + self._R
+        # ── IR ───────────────────────────────────────────
+        if "IR saved" in text:
+            return self._GOLD + msg + self._R
+        # ── SDR ──────────────────────────────────────────
+        if "SDR:" in text or text.startswith("sdr:"):
+            if "TX done" in text:
+                return self._BOLD + self._TEAL + msg + self._R
+            return self._BLUE + msg + self._R
+        # ── telemetry / misc ─────────────────────────────
+        if text.startswith("sender:") or text.startswith("node status"):
+            return self._GRAY + msg + self._R
+        return msg
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = super().format(record)
+        return self._colorize(msg, record.getMessage())
+
+
+def _setup_logging() -> None:
+    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    handler = logging.StreamHandler()
+    use_color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
+    handler.setFormatter(_ColorFormatter("%(asctime)s %(levelname)s %(message)s",
+                                         datefmt="%H:%M:%S") if use_color else fmt)
+    logging.root.handlers.clear()   # remove any handlers added before us
+    logging.root.setLevel(level)
+    logging.root.addHandler(handler)
+
+
+_setup_logging()
 log = logging.getLogger("copilot")
 
 
@@ -66,7 +134,6 @@ def print_banner() -> None:
 
     # 4 left-hand motifs (5 lines each); one is picked at random per launch.
     icons = [
-        [" ((  o  ))", "  ( ( ) )", "   (   )", "    ( )", "     o"],                    # broadcast rings
         ["     ((o))", "   /\\  |", "  /  \\ |", " / /\\ \\|", "/_/  \\_\\"],            # mountain + signal
         [" o——o——o", " |╲ | ╱|", " o——@——o", " |╱ | ╲|", " o——o——o"],                  # mesh nodes
         ["    N", "  .-'-.", " ( <o> )", "  '-.-'", "    S"],                            # compass
@@ -98,19 +165,27 @@ MAX_REPLY_CHARS = int(os.getenv("MAX_REPLY_CHARS", "600"))
 # sender's full last-known telemetry (GPS, power, RF link). Set to "" to disable.
 RESCUE_LOG_PATH = os.getenv("RESCUE_LOG_PATH") or str(HERE.parent / "evidence" / "rescue_log.jsonl")
 
-# Phase II — SDR broadcast
-SDR_BROADCAST_ENABLED = os.getenv("SDR_BROADCAST_ENABLED", "false").lower() in ("1", "true", "yes")
-SDR_FREQUENCY_HZ      = int(os.getenv("SDR_FREQUENCY_HZ", "469660000"))
-SDR_TX_GAIN           = int(os.getenv("SDR_TX_GAIN", "20"))
-SDR_TX_AMP            = int(os.getenv("SDR_TX_AMP", "0"))
-
-
 def _env_float(name: str):
     v = os.getenv(name)
     try:
         return float(v) if v not in (None, "") else None
     except ValueError:
         return None
+
+
+# Phase II — SDR broadcast
+SDR_BROADCAST_ENABLED = os.getenv("SDR_BROADCAST_ENABLED", "false").lower() in ("1", "true", "yes")
+SDR_FREQUENCY_HZ      = int(os.getenv("SDR_FREQUENCY_HZ", "469660000"))
+SDR_TX_GAIN           = int(os.getenv("SDR_TX_GAIN", "20"))
+SDR_TX_AMP            = int(os.getenv("SDR_TX_AMP", "0"))
+
+# Demo mock node info — injected only when real values are absent (no GPS fix, no telemetry)
+DEMO_GPS_LAT      = _env_float("DEMO_GPS_LAT")
+DEMO_GPS_LON      = _env_float("DEMO_GPS_LON")
+DEMO_GPS_ALT      = _env_float("DEMO_GPS_ALT")
+DEMO_BATTERY_PCT  = _env_float("DEMO_BATTERY_PCT")
+DEMO_BATTERY_V    = _env_float("DEMO_BATTERY_V")
+DEMO_NODE_NAME    = os.getenv("DEMO_NODE_NAME") or None
 
 
 # Base station's own location (Wio often has no GPS fix indoors). Set these to
@@ -478,6 +553,8 @@ class CopilotBot:
             self.my_node_num = iface.myInfo.my_node_num  # type: ignore[union-attr]
         except Exception:
             log.warning("Could not read my_node_num; self-message filter disabled")
+        # Dedup set — mesh relay can deliver the same packet ID more than once
+        self._seen_ids: set[int] = set()
         # Heavy RAG+LLM work runs here, NOT in the mesh reader thread. Blocking
         # the (serial) reader thread for seconds breaks the stream and kills the
         # process, so on_receive only enqueues and returns immediately.
@@ -504,6 +581,16 @@ class CopilotBot:
             sender = packet.get("from")
             if self.my_node_num is not None and sender == self.my_node_num:
                 return
+
+            # Drop duplicate packet IDs (mesh relay can re-deliver the same packet)
+            pkt_id = packet.get("id")
+            if pkt_id:
+                if pkt_id in self._seen_ids:
+                    log.debug("duplicate packet %s — ignored", pkt_id)
+                    return
+                self._seen_ids.add(pkt_id)
+                if len(self._seen_ids) > 200:   # bound memory
+                    self._seen_ids.clear()
 
             channel = packet.get("channel", 0)
             to = packet.get("to")
@@ -561,11 +648,21 @@ class CopilotBot:
                 # Phase II: risk triage + IR generation
                 try:
                     node_info = build_node_info(self.iface, packet)
+                    # Inject demo mock values for fields missing from the real node
+                    if node_info.get("lat") is None and DEMO_GPS_LAT is not None:
+                        node_info["lat"] = DEMO_GPS_LAT
+                        node_info["lon"] = DEMO_GPS_LON
+                        node_info["alt_m"] = DEMO_GPS_ALT
+                    if node_info.get("battery_pct") is None and DEMO_BATTERY_PCT is not None:
+                        node_info["battery_pct"] = int(DEMO_BATTERY_PCT)
+                        node_info["voltage"] = DEMO_BATTERY_V
+                    if not node_info.get("long_name") and DEMO_NODE_NAME:
+                        node_info["long_name"] = DEMO_NODE_NAME
                     risk = assess_risk(question, answer, QVAC_BASE_URL, QVAC_MODEL)
                     log.info("   triage: %s — %s", risk["risk"], risk.get("summary", ""))
                     ir_path = write_ir(question, answer, risk, node_info)
                     if ir_path:
-                        log.info("   IR saved → %s", ir_path)
+                        log.info("   IR saved → %s", ir_path.name)
                         # Phase II SDR: broadcast HIGH/CRITICAL over radio
                         if SDR_BROADCAST_ENABLED and risk.get("risk") in ("HIGH", "CRITICAL"):
                             log.info("   SDR: launching broadcast thread (%.3f MHz)", SDR_FREQUENCY_HZ / 1e6)
@@ -696,6 +793,14 @@ def main() -> None:
 
     bot = CopilotBot(iface, retriever)
     pub.subscribe(bot.on_receive, "meshtastic.receive")
+
+    if SDR_BROADCAST_ENABLED:
+        log.warning(
+            "SDR broadcast ENABLED on %.3f MHz — POC / demo use only. "
+            "Transmission requires regulatory authorisation. "
+            "Keep power minimal and environment controlled.",
+            SDR_FREQUENCY_HZ / 1e6,
+        )
 
     stop = threading.Event()
     sigint_count = 0
