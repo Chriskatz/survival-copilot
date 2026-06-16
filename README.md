@@ -107,12 +107,15 @@ To upgrade: point `QVAC_MODEL` at a larger GGUF alias (e.g. Qwen2.5-7B) if RAM a
 ## Project layout
 
 ```
-bot/               base-station runtime (BLE · RAG · LLM · chunker)
+bot/               base-station runtime (BLE · RAG · LLM · chunker · triage · IR · SDR)
 knowledge/{zh,en}/ bilingual RAG corpus + index.json
 tools/             Node helpers (audit log, TTS, lang-detect)
-docs/              architecture diagrams + pitch deck
+qvac/              QVAC SDK worker bundle (auto-generated)
+evidence/          inference audit log — model load/unload + TTFT/tok/s for one demo run
+incidents/         sample Incident Reports from live demo runs (HIGH + CRITICAL)
 qvac.config.json   model aliases (co-pilot + embed-mlm)
 remote-apis.yaml   remote-API disclosure (none at runtime)
+REPRODUCIBILITY.md hardware specs + step-by-step setup for all demo devices
 ```
 
 ## Constraints
