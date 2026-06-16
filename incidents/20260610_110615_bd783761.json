@@ -1,0 +1,42 @@
+{
+  "schema": "survival-copilot-ir/v1",
+  "generated_at": "2026-06-10T11:06:15+00:00",
+  "risk_level": "HIGH",
+  "incident": {
+    "message": "Fell off cliff, severe bleeding from head, can't move my legs, trapped on ledge, it's getting dark and temperature dropping fast, no shelter",
+    "bot_response": "1. Signal for rescue — The patient is trapped, bleeding, and in severe cold, so immediate emergency signals are needed.\n2. Protect head and neck — Avoid moving the patient to prevent further bleeding and injury.\n3. Secure the area — Stay put to prevent the patient from \"going downhill\" or \"following a stream.\"\n4. Provide immediate first aid — Apply pressure to the head wound and keep the patient warm with body contact.\n5. Stay with the patient — Do not leave until rescuers arrive to ensure continued care.",
+    "summary": "患者被困在悬崖上，头部严重出血，无法移动腿部，天气寒冷且即将黑暗，缺乏庇护所。",
+    "rationale": "患者处于极端寒冷和黑暗的环境中，且有严重出血和无法移动的状况，这会迅速导致身体机能衰竭，需立即救援。",
+    "recommended_actions": [
+      "立即启动紧急救援程序",
+      "提供头部包扎和保暖",
+      "确保患者不移动以防止进一步出血"
+    ]
+  },
+  "sender": {
+    "node_id": "!bd783761",
+    "node_num": 3178772321,
+    "long_name": "Meshtastic 3761",
+    "short_name": "3761",
+    "hw_model": "SEEED_WIO_TRACKER_L1"
+  },
+  "location": {
+    "lat": null,
+    "lon": null,
+    "alt_m": null,
+    "pos_age_s": null,
+    "dist_from_base_m": null,
+    "bearing_deg": null,
+    "bearing_compass": null
+  },
+  "device": {
+    "battery_pct": null,
+    "voltage": null
+  },
+  "rf_link": {
+    "rx_snr": 6.0,
+    "rx_rssi": -54,
+    "hops_away": 0,
+    "hop_limit": 3
+  }
+}

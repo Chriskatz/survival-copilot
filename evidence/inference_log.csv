@@ -1,0 +1,4 @@
+id,lang,prompt,promptTokens,generatedTokens,timeToFirstTokenMs,tokensPerSecond,backendDevice,stopReason,totalMs,answerBytesUtf8
+snake_bite_zh,zh,"被毒蛇咬到了怎麼辦,三步驟",566,70,369.154,95.64644700776924,gpu,,1215,193
+snake_bite_en,en,bitten by a snake — what do I do,526,91,325.95300000000003,97.96037879448451,gpu,,1312,405
+hypothermia_en,en,"found someone unconscious in the cold, very low temperature",586,77,366.164,92.81245856586672,gpu,,1310,243

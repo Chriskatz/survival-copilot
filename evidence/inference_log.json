@@ -1,0 +1,97 @@
+{
+  "schema": "qvac-inference-audit/v1",
+  "project": "Survival Co-pilot",
+  "generatedAt": "2026-06-06T16:40:54.171Z",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuModel": "Apple M3 Pro",
+    "cpuCount": 12,
+    "totalRamGB": 36,
+    "nodeVersion": "v25.2.1",
+    "requestedDevice": "gpu"
+  },
+  "model": {
+    "name": "QWEN3_1_7B_INST_Q4",
+    "role": "co-pilot (LLM)"
+  },
+  "events": [
+    {
+      "event": "model_load",
+      "model": "QWEN3_1_7B_INST_Q4",
+      "modelId": "bcfba1a2617da624",
+      "loadMs": 2732,
+      "info": {
+        "modelId": "bcfba1a2617da624",
+        "isDelegated": false,
+        "modelType": "llamacpp-completion",
+        "handlers": [
+          "completionStream",
+          "finetune",
+          "translate"
+        ],
+        "displayName": "LLM (llama.cpp)",
+        "addonPackage": "@qvac/llm-llamacpp",
+        "loadedAt": "2026-06-06T16:40:56.903Z",
+        "path": "f7cce66406dee646_Qwen3-1.7B-Q4_0.gguf"
+      }
+    },
+    {
+      "event": "inference",
+      "id": "snake_bite_zh",
+      "lang": "zh",
+      "prompt": "被毒蛇咬到了怎麼辦,三步驟",
+      "promptChars": 1348,
+      "promptTokens": 566,
+      "generatedTokens": 70,
+      "timeToFirstTokenMs": 369.154,
+      "tokensPerSecond": 95.64644700776924,
+      "backendDevice": "gpu",
+      "stopReason": null,
+      "totalMs": 1215,
+      "answerChars": 99,
+      "answerBytesUtf8": 193,
+      "answerPreview": "<think>\n\n</think>\n\n1. 被毒蛇咬到後，**保持冷靜並停止活動**。  \n2. **讓被咬部位低於心臟**（若被咬的是頭頸部除外）。  \n3. 立即撥打 119 / 112，求救。"
+    },
+    {
+      "event": "inference",
+      "id": "snake_bite_en",
+      "lang": "en",
+      "prompt": "bitten by a snake — what do I do",
+      "promptChars": 1708,
+      "promptTokens": 526,
+      "generatedTokens": 91,
+      "timeToFirstTokenMs": 325.95300000000003,
+      "tokensPerSecond": 97.96037879448451,
+      "backendDevice": "gpu",
+      "stopReason": null,
+      "totalMs": 1312,
+      "answerChars": 397,
+      "answerBytesUtf8": 405,
+      "answerPreview": "<think>\n\n</think>\n\n1. **Stay calm and stop all activity** — This is the most life-critical action right now. Vigorous movement can accelerate venom spread.  \n2."
+    },
+    {
+      "event": "inference",
+      "id": "hypothermia_en",
+      "lang": "en",
+      "prompt": "found someone unconscious in the cold, very low temperature",
+      "promptChars": 1801,
+      "promptTokens": 586,
+      "generatedTokens": 77,
+      "timeToFirstTokenMs": 366.164,
+      "tokensPerSecond": 92.81245856586672,
+      "backendDevice": "gpu",
+      "stopReason": null,
+      "totalMs": 1310,
+      "answerChars": 241,
+      "answerBytesUtf8": 243,
+      "answerPreview": "<think>\n\n</think>\n\n1. CALL SOS IMMEDIATELY — SEVERE HYPOTHERMIA RISK  \n2. CHECK FOR BREATH AND CONSCIOUSNESS  \n3. COVER BODY WITH WARM CLOTHES OR FOLDED TOWEL  "
+    },
+    {
+      "event": "model_unload",
+      "model": "QWEN3_1_7B_INST_Q4",
+      "modelId": "bcfba1a2617da624",
+      "unloadMs": 31
+    }
+  ]
+}
