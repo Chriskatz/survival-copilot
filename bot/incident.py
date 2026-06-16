@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -82,7 +83,8 @@ def assess_risk(
             raw = raw[raw.rfind("</think>") + len("</think>"):].strip()
         start, end = raw.find("{"), raw.rfind("}") + 1
         if start >= 0 and end > start:
-            data = json.loads(raw[start:end])
+            cleaned = re.sub(r",\s*([}\]])", r"\1", raw[start:end])
+            data = json.loads(cleaned)
             if data.get("risk") in RISK_LEVELS:
                 return data
         log.warning("triage: unexpected LLM output — %r", raw[:120])

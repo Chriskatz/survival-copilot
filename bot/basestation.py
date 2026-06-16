@@ -179,6 +179,7 @@ SDR_FREQUENCY_HZ      = int(os.getenv("SDR_FREQUENCY_HZ", "469660000"))
 SDR_TX_GAIN           = int(os.getenv("SDR_TX_GAIN", "20"))
 SDR_TX_AMP            = int(os.getenv("SDR_TX_AMP", "0"))
 
+
 # Demo mock node info — injected only when real values are absent (no GPS fix, no telemetry)
 DEMO_GPS_LAT      = _env_float("DEMO_GPS_LAT")
 DEMO_GPS_LON      = _env_float("DEMO_GPS_LON")
@@ -315,7 +316,7 @@ def _base_position(interface):
     return None, None, None
 
 
-def sender_info(interface, node_num: int | None) -> str:
+def sender_info(interface, node_num: int | None, use_demo: bool = False) -> str:
     """Best-effort one-line GPS + power snapshot for the sender.
 
     Read from the local node DB, which meshtastic-python fills from the
@@ -355,12 +356,26 @@ def sender_info(interface, node_num: int | None) -> str:
                 if balt is not None and pos.get("altitude") is not None:
                     loc += f" · Δalt {int(pos['altitude'] - balt):+d}m"
         else:
-            loc = "📍 no GPS"
+            if use_demo and DEMO_GPS_LAT is not None:
+                loc = f"📍 {DEMO_GPS_LAT:.5f},{DEMO_GPS_LON:.5f} [demo]"
+                if DEMO_GPS_ALT is not None:
+                    loc += f" alt={int(DEMO_GPS_ALT)}m"
+                blat, blon, _ = _base_position(interface)
+                if blat is not None:
+                    dist = _haversine_km(blat, blon, DEMO_GPS_LAT, DEMO_GPS_LON)
+                    brg = _bearing_deg(blat, blon, DEMO_GPS_LAT, DEMO_GPS_LON)
+                    loc += f" · ~{_fmt_dist(dist)} from base, bearing {brg:.0f}° {_compass(brg)}"
+            else:
+                loc = "📍 no GPS"
 
         if dm.get("batteryLevel") is not None:
             pwr = f"🔋 {dm['batteryLevel']}%"
             if dm.get("voltage") is not None:
                 pwr += f" {dm['voltage']:.2f}V"
+        elif use_demo and DEMO_BATTERY_PCT is not None:
+            pwr = f"🔋 {int(DEMO_BATTERY_PCT)}% [demo]"
+            if DEMO_BATTERY_V is not None:
+                pwr += f" {DEMO_BATTERY_V:.2f}V"
         else:
             pwr = "🔋 no telemetry"
 
@@ -618,7 +633,7 @@ class CopilotBot:
             question, sender, channel, packet = self._jobs.get()
             try:
                 log.info("Q from %s ch%s: %s", sender, channel, question)
-                log.info("   sender: %s", sender_info(self.iface, sender))
+                log.info("   sender: %s", sender_info(self.iface, sender, use_demo=True))
                 hits: list = []
                 help_text = help_reply(question)
                 if help_text is not None:
@@ -668,7 +683,13 @@ class CopilotBot:
                             log.info("   SDR: launching broadcast thread (%.3f MHz)", SDR_FREQUENCY_HZ / 1e6)
                             threading.Thread(
                                 target=broadcast_ir,
-                                args=(risk, node_info, SDR_FREQUENCY_HZ, SDR_TX_GAIN, SDR_TX_AMP),
+                                kwargs=dict(
+                                    risk_data=risk,
+                                    node_info=node_info,
+                                    frequency_hz=SDR_FREQUENCY_HZ,
+                                    tx_gain=SDR_TX_GAIN,
+                                    tx_amp=SDR_TX_AMP,
+                                ),
                                 daemon=True,
                                 name="sdr-broadcast",
                             ).start()
@@ -794,13 +815,6 @@ def main() -> None:
     bot = CopilotBot(iface, retriever)
     pub.subscribe(bot.on_receive, "meshtastic.receive")
 
-    if SDR_BROADCAST_ENABLED:
-        log.warning(
-            "SDR broadcast ENABLED on %.3f MHz — POC / demo use only. "
-            "Transmission requires regulatory authorisation. "
-            "Keep power minimal and environment controlled.",
-            SDR_FREQUENCY_HZ / 1e6,
-        )
 
     stop = threading.Event()
     sigint_count = 0

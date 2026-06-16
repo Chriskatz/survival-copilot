@@ -212,6 +212,10 @@ def fm_transmit(
     )
     log.info("sdr: TX done  → %.3f MHz  |  %s", frequency_hz / 1e6,
              total_line.strip() if total_line else "complete")
+    log.warning(
+        "sdr: POC / demo only — transmission on %.3f MHz requires regulatory authorisation.",
+        frequency_hz / 1e6,
+    )
 
 
 # ── public entry point ────────────────────────────────────────────────────────
@@ -247,7 +251,10 @@ def broadcast_ir(
         fm_transmit(wav_path, frequency_hz=frequency_hz, tx_gain=tx_gain, tx_amp=tx_amp)
     except subprocess.CalledProcessError as e:
         log.error("sdr: subprocess failed — %s", e)
+        return
     except Exception:
         log.exception("sdr: broadcast failed (non-fatal)")
+        return
     finally:
         wav_path.unlink(missing_ok=True)
+

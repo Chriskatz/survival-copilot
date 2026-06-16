@@ -123,10 +123,19 @@ remote-apis.yaml   remote-API disclosure (none at runtime)
 
 ## Roadmap
 
-- **Opportunistic uplink** — relay SOS over any available link (cellular, satellite, internet) when present; always degrades gracefully to fully offline.
-- **Solar SBC** — replace the laptop with a low-power single-board computer for permanent off-grid deployment.
+| Phase | Status | Feature |
+|-------|--------|---------|
+| I | ✅ Done | LoRa mesh · RAG · on-device LLM · bilingual reply |
+| II | ✅ Done | AI triage · Incident Report (IR) · SDR FM broadcast via HackRF |
+| III | Planned | Two-way SAR relay — HackRF RX + Whisper STT + LoRa relay back to victim |
+
+**Phase III detail:** After broadcasting the IR, the HackRF switches to RX mode and opens a 30-second voice window. The SAR team responds on the same frequency; QVAC Whisper (81 MB, multilingual) transcribes the voice, the LLM relays the question over LoRa to the victim, and the victim's reply is broadcast back as FM audio. Full two-way rescue coordination — no internet, no cell signal.
+
+**Further:**
+- **Opportunistic uplink** — relay SOS over any available link (cellular, satellite) when present; degrades gracefully to fully offline.
+- **Solar SBC** — replace the laptop with a low-power SBC for permanent off-grid deployment.
 - **Reliable chunked delivery** — chunk-level ACK/retry so long replies survive noisy LoRa channels.
 
 ## License
 
-[MIT](./LICENSE) — fully open-source, yours to run, modify, and ship with no vendor lock-in.
+[Apache 2.0](./LICENSE) — fully open-source, yours to run, modify, and ship with no vendor lock-in.
