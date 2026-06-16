@@ -13,31 +13,38 @@ QVAC Hackathon I · General Purpose track
 | Machine | MacBook Pro 16″ (Mac15,7) |
 | SoC | Apple M3 Pro |
 | CPU | 12-core (6 Performance + 6 Efficiency) |
-| GPU | 18-core Apple GPU (unified, Metal 4) |
+| GPU | 18-core Apple GPU (unified, Metal) |
 | RAM | 36 GB unified memory |
-| Storage | ~460 GB SSD |
-| OS | macOS 26 (Darwin 25.5.0) |
+| Storage | 494 GB SSD |
+| OS | macOS 26.5 (Build 25F71) |
 
 All QVAC SDK inference runs on the **GPU backend** (`"device": "gpu"` in `qvac.config.json`). No discrete GPU is required — Apple Silicon unified memory is sufficient.
 
-### LoRa Radio (victim-side handheld)
+### LoRa Mesh Nodes (×2)
 
 | Component | Spec |
 |-----------|------|
-| Device | Seeed Wio Tracker L1 |
+| Device | Seeed Wio Tracker L1 Pro |
 | Firmware | Meshtastic 2.x |
-| Transport | USB serial (base station side) |
-| Protocol | LoRa mesh via Meshtastic |
+| Node 1 (victim) | Sends SOS message over LoRa mesh |
+| Node 2 (base) | Connected to MacBook via USB serial, relays mesh traffic |
 
 ### SDR (Phase II — FM broadcast)
 
 | Component | Spec |
 |-----------|------|
-| Device | HackRF One (Great Scott Gadgets) |
+| Device | PortaPack H4M (operated in HackRF One mode) |
 | Frequency | 469.660 MHz |
 | TX gain | 20 dB VGA (configurable via `SDR_TX_GAIN`) |
 | TX amp | Off (`SDR_TX_AMP=0`) |
 | Interface | USB |
+
+### FM Radio Receiver
+
+| Component | Spec |
+|-----------|------|
+| Type | Handheld FM radio (×2 available, ×1 used in demo) |
+| Role | Receives FM broadcast from SDR to verify audio output |
 
 ---
 
@@ -50,7 +57,7 @@ All QVAC SDK inference runs on the **GPU backend** (`"device": "gpu"` in `qvac.c
 | @qvac/sdk | 0.12.0 |
 | @qvac/cli | 0.5.0 |
 | meshtastic (Python) | 2.7.8 |
-| hackrf_transfer | system-installed via Homebrew |
+| hackrf_transfer | system-installed via Homebrew (PortaPack H4M, HackRF One mode) |
 
 ---
 
@@ -119,7 +126,7 @@ Send `?<your question>` from any Meshtastic device. The bot replies to the same 
 
 ### Path C — Phase II (AI triage + Incident Report + SDR FM)
 
-Requires: Meshtastic device + HackRF One connected via USB.
+Requires: Meshtastic device + PortaPack H4M (HackRF One mode) connected via USB.
 
 ```bash
 # Additional env vars in bot/.env:
@@ -130,7 +137,7 @@ source .venv/bin/activate
 python bot/basestation.py
 ```
 
-On CRITICAL or HIGH triage: the bot generates a JSON + Markdown Incident Report in `incidents/`, then broadcasts a spoken FM alert via HackRF One on 469.660 MHz. Any FM radio tuned to that frequency receives the alert.
+On CRITICAL or HIGH triage: the bot generates a JSON + Markdown Incident Report in `incidents/`, then broadcasts a spoken FM alert via PortaPack H4M (HackRF One mode) on 469.660 MHz. Any FM radio tuned to that frequency receives the alert.
 
 ---
 
@@ -175,4 +182,4 @@ Per-query breakdown:
 The AI core (LLM + RAG) runs on any Apple Silicon Mac or Linux x86_64 machine with at least **8 GB RAM**. The full Phase II pipeline additionally requires:
 
 - A Meshtastic-compatible LoRa radio (any supported hw_model)
-- A HackRF One (or compatible SDR supporting `hackrf_transfer`)
+- A PortaPack H4M (HackRF One mode) or any SDR supporting `hackrf_transfer`
