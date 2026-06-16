@@ -173,7 +173,7 @@ Per-query breakdown:
 | `evidence/injection_test.json` | Prompt injection resilience tests (off-topic refusal verification) |
 | `remote-apis.yaml` | Structured declaration that zero remote API calls occur at runtime |
 | `qvac.config.json` | QVAC SDK model configuration (GPU, ctx_size, preload) |
-| `docs/survival-copilot-pitch-phase2-short.mp4` | Demo video (1m48s) |
+
 
 ---
 
