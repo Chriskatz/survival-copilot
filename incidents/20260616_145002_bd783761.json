@@ -1,0 +1,43 @@
+{
+  "schema": "survival-copilot-ir/v1",
+  "generated_at": "2026-06-16T14:50:02+00:00",
+  "risk_level": "CRITICAL",
+  "incident": {
+    "message": "Unconscious hiker found, severe head wound with uncontrolled bleeding, no pulse detected, cliff fall, completely trapped",
+    "bot_response": "1. Signal for rescue immediately — Notify emergency services with location, time of injury, and description of the snake.\n2. Check for pulse and breathing — If no pulse, begin CPR immediately.\n3. Immobilize the head — Apply pressure to the wound to control bleeding.\n4. Stay put and avoid moving — Prevent further injury and increase chances of being found.\n5. Use a mirror or signal fire — If communication is down, use a mirror or signal fire to attract attention.",
+    "summary": "Unconscious hiker found with severe head wound and uncontrolled bleeding, trapped on a cliff, no pulse detected.",
+    "rationale": "The hiker is unconscious, has a severe head wound and uncontrolled bleeding, and is completely trapped with no pulse. These factors indicate a high risk of rapid deterioration and require immediate medical attention and rescue.",
+    "recommended_actions": [
+      "Signal for rescue immediately",
+      "Begin CPR if no pulse is detected",
+      "Apply pressure to the wound to control bleeding",
+      "Immobilize the head and stay put"
+    ]
+  },
+  "sender": {
+    "node_id": "!bd783761",
+    "node_num": 3178772321,
+    "long_name": "Meshtastic 3761",
+    "short_name": "3761",
+    "hw_model": "SEEED_WIO_TRACKER_L1"
+  },
+  "location": {
+    "lat": 24.1872,
+    "lon": 121.6009,
+    "alt_m": 2150.0,
+    "pos_age_s": null,
+    "dist_from_base_m": null,
+    "bearing_deg": null,
+    "bearing_compass": null
+  },
+  "device": {
+    "battery_pct": 23,
+    "voltage": 3.71
+  },
+  "rf_link": {
+    "rx_snr": 6.0,
+    "rx_rssi": -21,
+    "hops_away": 0,
+    "hop_limit": 3
+  }
+}

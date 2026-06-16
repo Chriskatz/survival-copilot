@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 DEFAULT_MAX_BYTES = 200
-HEADER_RESERVE = 8
 
 
 def byte_length(s: str) -> int:
@@ -9,12 +8,7 @@ def byte_length(s: str) -> int:
 
 
 def chunk_for_mesh(text: str, max_bytes: int = DEFAULT_MAX_BYTES) -> list[str]:
-    if max_bytes <= HEADER_RESERVE:
-        raise ValueError(f"max_bytes must exceed header reserve ({HEADER_RESERVE})")
-    body_max = max_bytes - HEADER_RESERVE
-    bodies = _pack_by_byte_budget(text, body_max)
-    total = len(bodies) or 1
-    return [f"[{i + 1}/{total}] {body}" for i, body in enumerate(bodies)]
+    return _pack_by_byte_budget(text, max_bytes)
 
 
 _CJK_END = "。！？"
