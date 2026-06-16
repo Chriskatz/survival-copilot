@@ -23,3 +23,8 @@ incidents/
 
 # Presentation materials — slides, audio, architecture diagrams (not core source)
 docs/
+
+# Video production scripts (local tooling only)
+tools/make_video.sh
+tools/screenshot_slides.sh
+tools/gen_tts_phase2.mjs
