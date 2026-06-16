@@ -37,11 +37,11 @@ Two local processes, bridged by HTTP — no cloud anywhere:
 - **`qvac serve openai`** (`@qvac/sdk`) — LLM + embedding model on `127.0.0.1:11434`.
 - **`bot/basestation.py`** (Python) — owns BLE, retrieves RAG top-k, calls the LLM, chunks the reply to ≤200 bytes, sends back.
 
-Full diagram: `docs/architecture.zh.html` / `docs/architecture.en.html`.
+Full architecture diagrams are in the pitch deck (see demo video link in the DoraHacks submission).
 
 ## Requirements
 
-- **Node 22** + **Python 3.10+** — macOS or Linux
+- **Node.js 22+** + **Python 3.10+** — macOS or Linux (tested on Node 25.2.1 / Python 3.14.4)
 - A **Meshtastic** device over BLE — only needed for the full mesh path; the AI core runs without hardware (see below).
 
 ## Setup & run (reproducible)
@@ -129,7 +129,7 @@ REPRODUCIBILITY.md hardware specs + step-by-step setup for all demo devices
 | Phase | Status | Feature |
 |-------|--------|---------|
 | I | ✅ Done | LoRa mesh · RAG · on-device LLM · bilingual reply |
-| II | ✅ Done | AI triage · Incident Report (IR) · SDR FM broadcast via HackRF |
+| II | ✅ Done | AI triage · Incident Report (IR) · SDR FM broadcast via PortaPack H4M |
 | III | 🔜 Future | Two-way SAR relay — HackRF RX + Whisper STT + LoRa relay back to victim |
 
 **Further:**
