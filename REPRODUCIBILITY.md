@@ -170,6 +170,7 @@ Per-query breakdown:
 | `evidence/inference_log.json` | Structured audit log: model_load → inference × 3 → model_unload, with full perf metrics |
 | `evidence/inference_log.csv` | Same data in CSV form |
 | `evidence/injection_test.json` | Prompt injection resilience tests (off-topic refusal verification) |
+| `evidence/rescue_log.jsonl` | 6 representative live LoRa mesh messages (Jun 7–16): trigger filter, cliff-fall CRITICAL, unconscious hiker CRITICAL, off-topic refusal — includes raw RSSI/SNR/hop data; GPS redacted |
 | `incidents/20260610_110615_bd783761.*` | HIGH incident report — cliff fall scenario (json + md) |
 | `incidents/20260616_145002_bd783761.*` | CRITICAL incident report — unconscious hiker, GPS + battery (json + md) |
 | `remote-apis.yaml` | Structured declaration that zero remote API calls occur at runtime |
