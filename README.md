@@ -37,7 +37,6 @@ Two local processes, bridged by HTTP — no cloud anywhere:
 - **`qvac serve openai`** (`@qvac/sdk`) — LLM + embedding model on `127.0.0.1:11434`.
 - **`bot/basestation.py`** (Python) — owns BLE, retrieves RAG top-k, calls the LLM, chunks the reply to ≤200 bytes, sends back.
 
-Full architecture diagrams are in the pitch deck (see demo video link in the DoraHacks submission).
 
 ## Requirements
 
@@ -47,7 +46,7 @@ Full architecture diagrams are in the pitch deck (see demo video link in the Dor
 ## Setup & run (reproducible)
 
 ```bash
-git clone <this-repo> QVAC && cd QVAC
+git clone https://github.com/Chriskatz/survival-copilot.git QVAC && cd QVAC
 npm install                                   # QVAC SDK + CLI
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r bot/requirements.txt
@@ -80,7 +79,8 @@ Send `?your question` from any Meshtastic device; the bot DMs a chunked, grounde
 
 | Var | Default | Effect |
 |---|---|---|
-| `MESH_BLE_ADDRESS` | auto | Node name or MAC; empty = first found |
+| `MESH_SERIAL_PORT` | _(empty)_ | USB serial port (`auto` = auto-detect). **Recommended** for a stationary base station — avoids macOS BLE silent-drop. Leave empty to use BLE instead. |
+| `MESH_BLE_ADDRESS` | auto | BLE only (ignored when `MESH_SERIAL_PORT` is set). Node name or MAC; empty = first found. |
 | `TRIGGER_PREFIX` | `?` | Messages starting with this are answered; empty = all |
 | `REPLY_MODE` | `dm` | `dm` = direct to sender · `channel` = same channel |
 | `QVAC_MODEL` | `co-pilot` | LLM alias in `qvac.config.json` |
