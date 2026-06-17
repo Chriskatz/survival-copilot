@@ -16,6 +16,12 @@ A total signal blackout is the literal proving ground for QVAC's thesis: AI must
 
 All inference runs through `@qvac/sdk` — LLM and embeddings. No other inference path, no cloud fallback.
 
+## Hardware
+
+![Hardware setup](assets/hardware.jpg)
+
+From left: iPhone (no SIM, Meshtastic sender) · Wio Tracker L1 Pro ×2 (LoRa mesh nodes) · MacBook Pro (base station, 100% local inference) · PortaPack H4M (SDR FM broadcast) · FM handheld radio (receives alert)
+
 ## Architecture
 
 ```
